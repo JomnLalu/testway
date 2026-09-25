@@ -1,15 +1,20 @@
 /* ==========================================================================
    jomontolalu.com
-   One fixed WebGL stage, five architectural states, scroll-bound.
+   One fixed WebGL stage: the kinetic data monolith.
 
-   Hero          a stepped terrain of blocks rising to the back right
-   About         two mirrored plinths facing each other across a gap
-   Capabilities  four equal ziggurats on a tiled floor
-   Work          long slat rows; a wave travels with the scroll, four signal rows
-   Contact       every block settles into the three bars of the wordmark
+   Two walls of matte, stacked blocks line a canyon. The copy sits on the
+   empty floor between them: the canyon is fitted to the text column on
+   every resize, so the architecture frames the content instead of sitting
+   behind it.
 
-   All motion is driven by a damped scroll value (frame-rate independent),
-   so the architecture settles as you scroll down and reverses on the way up.
+   Scroll        the walls travel toward the horizon at a parallax rate;
+                 every page section owns a stretch of the canyon
+   Pointer       a raycast onto the crest of the walls drives a topographic
+                 well: blocks under the cursor sink, a ring around them rises
+   Click / tap   a sea green pulse runs outward through the glass slats
+
+   Every moving value is eased with exponential damping (frame-rate
+   independent). The loop sleeps as soon as the architecture has settled.
    ========================================================================== */
 (function () {
   'use strict';
@@ -44,8 +49,7 @@
   }
 
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
-  function lerp(a, b, t) { return a + (b - a) * t; }
-  function smoothstep(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
+  function wrap(v, p) { return v - p * Math.floor(v / p); }
 
   /* Exponential damping: identical feel at 30, 60 or 120 fps. */
   function damp(current, target, lambda, dt) {
@@ -63,6 +67,7 @@
     stone: 0xE5E6E1,
     petrol: 0x0B1618,
     chalk: 0xE8EAE6,
+    ink: 0x14181A,
     seaLight: 0x7FC9B6,
     seaDeep: 0x17564A
   };
@@ -337,74 +342,40 @@
   })();
 
   /* ------------------------------------------------------------------------
-     Director: maps raw scroll to a continuous stage value 0..4.
-     Each section owns an anchor; between anchors the value eases with a
-     plateau, so each composition holds still while its section is read.
+     Director: section geometry in document space, and the chapter state.
+     The stage turns section tops into stretches of the canyon.
      ------------------------------------------------------------------------ */
   var SECTION_IDS = ['hero', 'about', 'capabilities', 'work', 'contact'];
-  var LAST = SECTION_IDS.length - 1;
-
-  var director = {
-    stage: 0,      /* target stage from scroll, 0..4 */
-    flow: 0,       /* scroll distance in viewport heights, drives the work wave */
-    workTop: 0,    /* top edge of #work relative to the viewport, CSS px */
-    pointerX: 0,
-    pointerY: 0
-  };
 
   var metrics = {
-    anchors: [0, 1, 2, 3, 4],
+    sectionTops: [0, 1, 2, 3, 4],
     workTopDoc: 0,
     mastheadH: 72
   };
 
   function measure() {
     var y = scrollY();
-    var vh = window.innerHeight || 1;
-    var maxScroll = Math.max(1, root.scrollHeight - vh);
 
     function top(id) {
       var el = document.getElementById(id);
       return el ? el.getBoundingClientRect().top + y : 0;
     }
 
-    var a = [
-      0,
-      top('about') - vh * 0.2,
-      top('capabilities') - vh * 0.2,
-      top('work') - vh * 0.2,
-      Math.min(top('contact') - vh * 0.1, maxScroll)
-    ];
+    var tops = [];
+    for (var i = 0; i < SECTION_IDS.length; i++) {
+      tops.push(i ? Math.max(top(SECTION_IDS[i]), tops[i - 1] + 1) : 0);
+    }
 
-    for (var i = 1; i < a.length; i++) a[i] = Math.max(a[i], a[i - 1] + 1);
-
-    metrics.anchors = a;
+    metrics.sectionTops = tops;
     metrics.workTopDoc = top('work');
 
     var masthead = document.getElementById('masthead');
     metrics.mastheadH = masthead ? masthead.offsetHeight : 72;
   }
 
-  function stageFor(y) {
-    var a = metrics.anchors;
-    if (y <= a[0]) return 0;
-    for (var i = 0; i < LAST; i++) {
-      if (y < a[i + 1]) {
-        var t = (y - a[i]) / (a[i + 1] - a[i]);
-        /* Hold 15% at each end of the segment: compositions settle and rest. */
-        return i + smoothstep((t - 0.15) / 0.7);
-      }
-    }
-    return LAST;
-  }
-
   function readScroll(y) {
-    var vh = window.innerHeight || 1;
-    director.stage = stageFor(y);
-    director.flow = y / vh;
-    director.workTop = metrics.workTopDoc - y;
-
-    if (window.__setChapter) window.__setChapter(director.workTop <= metrics.mastheadH);
+    var workTop = metrics.workTopDoc - y;
+    if (window.__setChapter) window.__setChapter(workTop <= metrics.mastheadH);
     if (window.__setScrolled) window.__setScrolled(y > 24);
   }
 
@@ -413,577 +384,873 @@
   onResizeFrame(measure);
   onScrollFrame(readScroll);
 
-  if (!coarse && !reduced) {
-    window.addEventListener('pointermove', function (e) {
-      director.pointerX = (e.clientX / window.innerWidth) * 2 - 1;
-      director.pointerY = (e.clientY / window.innerHeight) * 2 - 1;
-    }, PASSIVE);
-  }
-
   /* ------------------------------------------------------------------------
      Stage
      ------------------------------------------------------------------------ */
+  var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.min.js';
+
   (function stage() {
     var canvas = document.getElementById('stage');
 
-    if (typeof THREE === 'undefined' || !canvas) {
+    function unavailable() {
       root.setAttribute('data-webgl', 'off');
       boot.step();
+    }
+
+    if (!canvas || !('WebGL2RenderingContext' in window)) {
+      unavailable();
       return;
     }
 
-    var renderer;
-    try {
-      renderer = new THREE.WebGLRenderer({
-        canvas: canvas,
-        antialias: !coarse,
-        alpha: false,
-        powerPreference: 'high-performance'
-      });
-    } catch (err) {
-      root.setAttribute('data-webgl', 'off');
-      boot.step();
-      return;
-    }
+    import(THREE_URL).then(build)['catch'](unavailable);
 
-    var maxDpr = coarse ? 1.5 : 2;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
-    renderer.setSize(window.innerWidth, window.innerHeight, false);
-    renderer.setClearColor(new THREE.Color(PALETTE.stone), 1);
-    renderer.sortObjects = true;
-
-    var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(28, window.innerWidth / window.innerHeight, 0.1, 80);
-
-    /* ---- Grid ------------------------------------------------------------ */
-    var COLS = 32;
-    var ROWS = 20;
-    var CELL = 0.16;          /* one module: every block is built in cubes of this size */
-    var COUNT = COLS * ROWS;
-
-    var colors = {
-      uStone: { value: new THREE.Color(PALETTE.stone) },
-      uPetrol: { value: new THREE.Color(PALETTE.petrol) },
-      uChalk: { value: new THREE.Color(PALETTE.chalk) },
-      uSeaLight: { value: new THREE.Color(PALETTE.seaLight) },
-      uSeaDeep: { value: new THREE.Color(PALETTE.seaDeep) }
-    };
-
-    var uniforms = {
-      uStage: { value: 0 },
-      uTime: { value: 0 },
-      uFlow: { value: 0 },
-      uSplit: { value: -1 },
-      uIntensity: { value: 1 },
-      uFogNear: { value: 6 },
-      uFogFar: { value: 14 },
-      uStone: colors.uStone,
-      uPetrol: colors.uPetrol,
-      uChalk: colors.uChalk,
-      uSeaLight: colors.uSeaLight,
-      uSeaDeep: colors.uSeaDeep
-    };
-
-    /* Chapter split shared by the backdrop and the blocks: every pixel
-       below the top edge of #work uses the dark palette. */
-    var SPLIT_GLSL = [
-      'uniform float uSplit;',
-      'float darkMask(){',
-      '  return clamp(uSplit - gl_FragCoord.y + 0.5, 0.0, 1.0);',
-      '}'
-    ].join('\n');
-
-    /* ---- Backdrop: full-screen quad, stone above the split, petrol below -- */
-    var backdrop = new THREE.Mesh(
-      new THREE.PlaneGeometry(2, 2),
-      new THREE.ShaderMaterial({
-        uniforms: uniforms,
-        depthTest: false,
-        depthWrite: false,
-        vertexShader: [
-          'void main(){',
-          '  gl_Position = vec4(position.xy, 0.0, 1.0);',
-          '}'
-        ].join('\n'),
-        fragmentShader: [
-          'uniform vec3 uStone;',
-          'uniform vec3 uPetrol;',
-          SPLIT_GLSL,
-          'void main(){',
-          '  gl_FragColor = vec4(mix(uStone, uPetrol, darkMask()), 1.0);',
-          '}'
-        ].join('\n')
-      })
-    );
-    backdrop.frustumCulled = false;
-    backdrop.renderOrder = -10;
-    scene.add(backdrop);
-
-    /* ---- Blocks ------------------------------------------------------------ */
-    var boxGeo = new THREE.BoxGeometry(1, 1, 1);
-    boxGeo.translate(0, 0.5, 0); /* base on the floor, grows upward */
-
-    var cellAttr = new Float32Array(COUNT * 2);
-    var seedAttr = new Float32Array(COUNT);
-
-    var VERT = [
-      'attribute vec2 aCell;',
-      'attribute float aSeed;',
-      'uniform float uStage;',
-      'uniform float uTime;',
-      'uniform float uFlow;',
-      'varying vec3 vNormal;',
-      'varying vec3 vLocal;',
-      'varying vec3 vSize;',
-      'varying float vFloorY;',
-      'varying float vAccent;',
-      'varying float vDepth;',
-      '',
-      '#define CELL ' + CELL.toFixed(4),
-      '',
-      'float hash21(vec2 p){',
-      '  p = fract(p * vec2(123.34, 345.45));',
-      '  p += dot(p, p + 34.345);',
-      '  return fract(p.x * p.y);',
-      '}',
-      'float vnoise(vec2 p){',
-      '  vec2 i = floor(p); vec2 f = fract(p);',
-      '  f = f * f * (3.0 - 2.0 * f);',
-      '  float a = hash21(i);',
-      '  float b = hash21(i + vec2(1.0, 0.0));',
-      '  float c = hash21(i + vec2(0.0, 1.0));',
-      '  float d = hash21(i + vec2(1.0, 1.0));',
-      '  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);',
-      '}',
-      'float inRange(float v, float a, float b){',
-      '  return step(a - 0.5, v) * step(v, b + 0.5);',
-      '}',
-      '',
-      /* S = (height in modules, presence 0..1, accent 0..1, unused)
-         F = footprint (x, z) as a fraction of one cell */
-      '// 0. Hero: stepped terrain rising to the back right',
-      'void stHero(vec2 c, float seed, out vec4 S, out vec2 F){',
-      '  vec2 q = c - vec2(15.5, 9.5);',
-      '  float cheb = max(abs(q.x) / 15.0, abs(q.y) / 9.0);',
-      '  float p = step(cheb, 0.80 + 0.2 * hash21(c + 7.13));',
-      '  float rise = (c.x / 31.0) * 0.62 + (1.0 - c.y / 19.0) * 0.38;',
-      '  float n = vnoise(c * 0.22 + 3.1);',
-      '  float m = 1.0 + floor(pow(rise, 1.7) * 8.0 * (0.4 + 0.6 * n));',
-      '  float breathe = 0.5 + 0.5 * sin(uTime * 0.32 + seed * 43.0);',
-      '  m += smoothstep(0.93, 1.0, breathe);',
-      '  S = vec4(m, p, step(0.975, seed) * step(4.0, m), 0.0);',
-      '  F = vec2(0.84);',
-      '}',
-      '',
-      '// 1. About: two mirrored plinths, stepping up toward the gap',
-      'void stAbout(vec2 c, float seed, out vec4 S, out vec2 F){',
-      '  float rows = inRange(c.y, 4.0, 15.0);',
-      '  float left = rows * inRange(c.x, 3.0, 13.0);',
-      '  float right = rows * inRange(c.x, 18.0, 28.0);',
-      '  float m = 1.0;',
-      '  m = mix(m, 1.0 + floor((c.x - 3.0) / 2.0), left);',
-      '  m = mix(m, 1.0 + floor((28.0 - c.x) / 2.0), right);',
-      '  float a = left * inRange(c.x, 13.0, 13.0) + right * inRange(c.x, 18.0, 18.0);',
-      '  S = vec4(m, left + right, a, 0.0);',
-      '  F = vec2(0.84);',
-      '}',
-      '',
-      '// 2. Capabilities: four equal ziggurats on a tiled floor',
-      'void stCapabilities(vec2 c, float seed, out vec4 S, out vec2 F){',
-      '  float floorP = inRange(c.y, 3.0, 16.0) * inRange(c.x, 1.0, 30.0);',
-      '  float lx = c.x - 3.0;',
-      '  float k = floor(lx / 7.0);',
-      '  float px = lx - k * 7.0;',
-      '  float pad = inRange(k, 0.0, 3.0) * inRange(px, 0.0, 4.0) * inRange(c.y, 7.0, 11.0);',
-      '  float d = max(abs(px - 2.0), abs(c.y - 9.0));',
-      '  float m = mix(0.25, 1.0 + (2.0 - d) * 1.5, pad);',
-      '  S = vec4(m, max(floorP, pad), pad * step(d, 0.5), 0.0);',
-      '  F = mix(vec2(0.92), vec2(0.84), pad);',
-      '}',
-      '',
-      '// 3. Work: slat rows; a wave travels with the scroll',
-      'void stWork(vec2 c, float seed, out vec4 S, out vec2 F){',
-      '  float p = inRange(c.x, 1.0, 30.0) * inRange(c.y, 1.0, 18.0);',
-      '  float w = 0.5 + 0.5 * sin(c.x * 0.34 - uFlow * 2.4 + c.y * 0.62);',
-      '  w *= 0.62 + 0.38 * sin(c.x * 0.13 + c.y * 0.21 - uFlow * 0.9);',
-      '  float depth = 0.45 + 0.55 * (1.0 - c.y / 19.0);',
-      '  float m = 0.75 + 6.5 * w * w * depth;',
-      '  float signalRow = step(abs(mod(c.y, 4.0) - 3.0), 0.1);',
-      '  S = vec4(m, p, signalRow * smoothstep(0.42, 0.62, w), 0.0);',
-      '  F = vec2(0.96, 0.42);',
-      '}',
-      '',
-      '// 4. Contact: the three bars of the wordmark on a low plinth',
-      'void stContact(vec2 c, float seed, out vec4 S, out vec2 F){',
-      '  float plinth = inRange(c.y, 5.0, 14.0) * inRange(c.x, 2.0, 29.0);',
-      '  float rows = inRange(c.y, 7.0, 12.0);',
-      '  float b1 = rows * inRange(c.x, 4.0, 8.0);',
-      '  float b2 = rows * inRange(c.x, 13.0, 17.0);',
-      '  float b3 = rows * inRange(c.x, 22.0, 26.0);',
-      '  float bar = b1 + b2 + b3;',
-      '  float m = 0.5;',
-      '  m = mix(m, 6.0, b1);',
-      '  m = mix(m, 11.0, b2);',
-      '  m = mix(m, 16.0, b3);',
-      '  S = vec4(m, max(plinth, bar), b3, 0.0);',
-      '  F = mix(vec2(0.9), vec2(1.0), bar);',
-      '}',
-      '',
-      'void stateAt(float i, vec2 c, float seed, out vec4 S, out vec2 F){',
-      '  if (i < 0.5) stHero(c, seed, S, F);',
-      '  else if (i < 1.5) stAbout(c, seed, S, F);',
-      '  else if (i < 2.5) stCapabilities(c, seed, S, F);',
-      '  else if (i < 3.5) stWork(c, seed, S, F);',
-      '  else stContact(c, seed, S, F);',
-      '}',
-      '',
-      'void main(){',
-      '  float i0 = floor(uStage);',
-      '  float f = uStage - i0;',
-      '  float i1 = min(i0 + 1.0, 4.0);',
-      '',
-      '  vec4 A; vec2 FA; vec4 B; vec2 FB;',
-      '  stateAt(i0, aCell, aSeed, A, FA);',
-      '  stateAt(i1, aCell, aSeed, B, FB);',
-      '',
-      /* Staggered hand-off: blocks settle in a sweep from left to right,
-         with a little per-block jitter, like a crane placing modules. */
-      '  float delay = (aCell.x / 31.0) * 0.6 + aSeed * 0.4;',
-      '  float k = smoothstep(0.0, 1.0, clamp((f - delay * 0.45) / 0.55, 0.0, 1.0));',
-      '',
-      '  float hA = mix(B.x, A.x, step(0.5, A.y));',
-      '  float hB = mix(A.x, B.x, step(0.5, B.y));',
-      '  float m = mix(hA, hB, k);',
-      '  float p = mix(A.y, B.y, k);',
-      '  vec2 fp = mix(FA, FB, k);',
-      '  vAccent = mix(A.z, B.z, k);',
-      '',
-      '  float h = max(m * CELL, 0.004);',
-      '  float sink = (1.0 - p) * (h + 0.32);',
-      '  vec3 size = vec3(CELL * fp.x, h, CELL * fp.y);',
-      '  if (p < 0.002) size = vec3(0.0);',
-      '',
-      '  vec3 local = position * size;',
-      '  local.y -= sink;',
-      '  vec3 origin = vec3(instanceMatrix[3][0], 0.0, instanceMatrix[3][2]);',
-      '  vec4 mv = viewMatrix * modelMatrix * vec4(origin + local, 1.0);',
-      '',
-      '  vNormal = normal;',
-      '  vLocal = position;',
-      '  vSize = size;',
-      '  vFloorY = local.y;',
-      '  vDepth = -mv.z;',
-      '  gl_Position = projectionMatrix * mv;',
-      '}'
-    ].join('\n');
-
-    var FRAG = [
-      'uniform vec3 uStone;',
-      'uniform vec3 uPetrol;',
-      'uniform vec3 uChalk;',
-      'uniform vec3 uSeaLight;',
-      'uniform vec3 uSeaDeep;',
-      'uniform float uIntensity;',
-      'uniform float uFogNear;',
-      'uniform float uFogFar;',
-      SPLIT_GLSL,
-      'varying vec3 vNormal;',
-      'varying vec3 vLocal;',
-      'varying vec3 vSize;',
-      'varying float vFloorY;',
-      'varying float vAccent;',
-      'varying float vDepth;',
-      '',
-      '#define CELL ' + CELL.toFixed(4),
-      '',
-      'void main(){',
-      '  float dm = darkMask();',
-      '  vec3 bg = mix(uStone, uPetrol, dm);',
-      '  vec3 n = normalize(vNormal);',
-      '',
-      /* Key light from the upper left front. Tops read brightest. */
-      '  vec3 L = normalize(vec3(-0.5, 0.9, 0.42));',
-      '  float lit = clamp(dot(n, L) / L.y, 0.0, 1.0);',
-      '',
-      /* Two palettes: chalk blocks on stone, petrol blocks on petrol.
-         Shadows always fall toward petrol, highlights toward chalk. */
-      '  vec3 face = mix(uChalk, mix(uPetrol, uChalk, 0.30), dm);',
-      '  vec3 shade = mix(mix(uChalk, uPetrol, 0.48), mix(uPetrol, uChalk, 0.06), dm);',
-      '  vec3 accent = mix(uSeaDeep, uSeaLight, dm);',
-      '  float top = step(0.5, n.y);',
-      '  face = mix(face, accent, vAccent * (0.22 + 0.78 * top));',
-      '  vec3 col = mix(shade, face, 0.16 + 0.84 * lit);',
-      '',
-      /* Ambient occlusion where side faces meet the floor. */
-      '  float side = 1.0 - abs(n.y);',
-      '  float ao = smoothstep(0.0, 0.24, vFloorY);',
-      '  col = mix(shade, col, mix(1.0, 0.4 + 0.6 * ao, side));',
-      '',
-      /* Hairline edges and module grooves, anti-aliased with derivatives. */
-      '  vec3 wl = vLocal * vSize;',
-      '  vec3 an = abs(n);',
-      '  vec3 e = vec3(',
-      '    0.5 * vSize.x - abs(wl.x),',
-      '    min(wl.y, vSize.y - wl.y),',
-      '    0.5 * vSize.z - abs(wl.z)',
-      '  ) + an * 100.0;',
-      '  float edge = min(min(e.x, e.y), e.z);',
-      '  float lineE = 1.0 - smoothstep(0.0, max(fwidth(edge) * 1.2, 1e-4), edge);',
-      '  float gy = mod(wl.y, CELL);',
-      '  gy = min(gy, CELL - gy) + an.y * 100.0;',
-      '  float lineG = 1.0 - smoothstep(0.0, max(fwidth(wl.y) * 1.1, 1e-4), gy);',
-      '  float line = max(lineE, lineG * 0.5);',
-      '  vec3 lineCol = mix(mix(uChalk, uPetrol, 0.66), mix(uPetrol, uChalk, 0.58), dm);',
-      '  col = mix(col, lineCol, line * 0.6);',
-      '',
-      /* Sink below the floor into the ground colour; recede with depth. */
-      '  float under = smoothstep(-0.01, -0.28, vFloorY);',
-      '  float fog = smoothstep(uFogNear, uFogFar, vDepth);',
-      '  float vis = uIntensity * (1.0 - under) * (1.0 - fog * 0.9);',
-      '  if (under > 0.995) discard;',
-      '  gl_FragColor = vec4(mix(bg, col, vis), 1.0);',
-      '}'
-    ].join('\n');
-
-    var blockMat = new THREE.ShaderMaterial({
-      uniforms: uniforms,
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      extensions: { derivatives: true }
-    });
-
-    var blocks = new THREE.InstancedMesh(boxGeo, blockMat, COUNT);
-    blocks.instanceMatrix.setUsage(THREE.StaticDrawUsage);
-    blocks.frustumCulled = false;
-
-    var dummy = new THREE.Object3D();
-    var idx = 0;
-    for (var r = 0; r < ROWS; r++) {
-      for (var c = 0; c < COLS; c++) {
-        dummy.position.set((c - (COLS - 1) / 2) * CELL, 0, (r - (ROWS - 1) / 2) * CELL);
-        dummy.updateMatrix();
-        blocks.setMatrixAt(idx, dummy.matrix);
-        cellAttr[idx * 2] = c;
-        cellAttr[idx * 2 + 1] = r;
-        /* Deterministic per-block seed so the layout is identical every load */
-        var s = Math.sin(c * 12.9898 + r * 78.233) * 43758.5453;
-        seedAttr[idx] = s - Math.floor(s);
-        idx++;
+    function build(THREE) {
+      var renderer;
+      try {
+        renderer = new THREE.WebGLRenderer({
+          canvas: canvas,
+          antialias: !coarse,
+          alpha: false,
+          powerPreference: 'high-performance'
+        });
+      } catch (err) {
+        unavailable();
+        return;
       }
-    }
-    blocks.instanceMatrix.needsUpdate = true;
-    boxGeo.setAttribute('aCell', new THREE.InstancedBufferAttribute(cellAttr, 2));
-    boxGeo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seedAttr, 1));
 
-    var group = new THREE.Group();
-    group.add(blocks);
-    scene.add(group);
+      /* ---- Dimensions --------------------------------------------------------
+         One plan cell is one world unit. Blocks stack in height modules.
+      ---------------------------------------------------------------------------- */
+      var DEG = Math.PI / 180;
+      var CELL = 1;
+      var MODULE = 0.5;
+      var JOINT = 1;            /* a visible joint every two modules: stacked cubes */
+      var MAX_COLS = 40;        /* per wall: enough for a 32:9 monitor */
+      var MAX_ROWS = 72;
+      var COUNT = MAX_ROWS * MAX_COLS * 2;
+      var live = 0;             /* slots in use: packed densely from index 0 */
+      var MAX_H = 14;           /* tallest block, pointer rim included */
+      var TALLEST = 24;         /* tallest profile, in modules: leaves room for the rim */
+      var MATTE_W = 0.9;        /* footprint across the wall, as a fraction of a cell */
+      var GLASS_W = 0.98;
+      var GLASS_D = 0.24;       /* glass slats are thin along the canyon */
+      var GLASS_RISE = 4;       /* modules a slat stands proud of its bay */
 
-    /* ---- Compositions --------------------------------------------------------
-       pos / look: camera in world units.
-       shift: lens shift as a fraction of the viewport, [x, y]. +x moves the
-              architecture right, +y moves it up. This keeps perspective
-              orthogonal (no camera yaw) while holding it opposite the text.
-       intensity: how strongly the architecture reads against the ground.
-       scale: proportion relative to the section's importance.
-    ---------------------------------------------------------------------------- */
-    var WIDE = [
-      { pos: [5.2, 4.2, 8.4], look: [0.1, 0.45, 0], shift: [0.22, 0.02], intensity: 1.0, scale: 0.92 },
-      { pos: [-5.4, 3.4, 7.6], look: [0, 0.35, 0], shift: [-0.22, -0.2], intensity: 0.92, scale: 0.78 },
-      { pos: [2.6, 5.6, 7.4], look: [0, 0.2, 0], shift: [0.2, 0.2], intensity: 0.8, scale: 0.72 },
-      { pos: [5.4, 2.1, 5.4], look: [0, 0.35, -0.4], shift: [0.22, -0.02], intensity: 0.85, scale: 1.0 },
-      { pos: [-4.4, 3.0, 8.8], look: [0.2, 0.95, 0], shift: [0.22, -0.04], intensity: 1.0, scale: 0.84 }
-    ];
+      /* Lens: a long lens looking down the canyon, so walls read as walls
+         and the floor between them stays a calm, even ground. */
+      var LENS = { fov: 22, tilt: 58 * DEG, dist: 48 };
+      var FIT_Y = 0.55;         /* NDC height at which the wall base meets the column edge */
+      var MARGIN_PX = 48;       /* air between the copy and the foot of each wall */
+      var NARROW_EDGE = 0.8;    /* on phones the walls rise from the outer edges */
+      var PARALLAX = 0.42;      /* floor speed at mid screen, relative to the page */
 
-    var NARROW = [
-      { pos: [5.2, 4.8, 8.4], look: [0.1, 0.45, 0], shift: [0.0, 0.26], intensity: 0.6, scale: 0.8 },
-      { pos: [-5.4, 3.8, 7.6], look: [0, 0.35, 0], shift: [0.0, 0.06], intensity: 0.7, scale: 0.84 },
-      { pos: [2.6, 6.0, 7.4], look: [0, 0.2, 0], shift: [0.0, 0.0], intensity: 0.6, scale: 0.84 },
-      { pos: [5.4, 2.6, 5.4], look: [0, 0.35, -0.4], shift: [0.0, 0.0], intensity: 0.7, scale: 1.0 },
-      { pos: [-4.4, 3.2, 8.8], look: [0.2, 0.95, 0], shift: [0.0, -0.16], intensity: 0.85, scale: 0.84 }
-    ];
+      /* Motion constants: exponential damping rates, per second */
+      var TRAVEL_RATE = 7;
+      var SWAY_RATE = 2.6;
+      var HEIGHT_RATE = 9;
+      var WELL_RATE = 5;
+      var WELL_FOLLOW = 14;
+      var PULSE_RATE = 16;
 
-    var keyframes = narrow ? NARROW : WIDE;
-    var viewW = 1;
-    var viewH = 1;
-    var distScale = 1;
+      /* Proximity well: a Ricker profile. The centre sinks by WELL_DEPTH,
+         a ring at 1.73 sigma rises by 45% of that. */
+      var CREST_Y = 4;
+      var WELL_SIGMA = 1.8;
+      var WELL_DEPTH = 5 * MODULE;
 
-    function layout() {
-      var w = window.innerWidth;
-      var h = window.innerHeight;
-      viewW = w;
-      viewH = h;
+      /* Click pulse: the front eases out to RIPPLE_REACH while its energy decays */
+      var RIPPLE_REACH = 48;
+      var RIPPLE_SPEED = 1.2;
+      var RIPPLE_FADE = 0.9;
+      var RING_WIDTH = 1.3;
+      var RIPPLE_KICK = 1.2 * MODULE;
+      var MAX_RIPPLES = 4;
+
+      /* One stretch of canyon per page section, in section order.
+         Heights are in modules. The two columns on the canyon edge form a
+         clean cliff; rise and noise build the mass behind it. Every `bay`
+         rows the wall opens and a glass slat stands in the gap. */
+      var PROFILES = [
+        { base: 10, rise: 1, noise: 8, bay: 6, depth: 0.9 },            /* hero: the monolith */
+        { base: 6, rise: 2, noise: 0, bay: 8, depth: 0.9 },             /* about: terraces */
+        { base: 6, rise: 1, noise: 0, bay: 5, depth: 0.9, zig: 2 },     /* capabilities: four-block bays */
+        { base: 4, rise: 1, noise: 0, bay: 4, depth: 0.42, wave: 8 },   /* work: data slats */
+        { base: 3, rise: 1, noise: 3, bay: 9, depth: 0.9 }              /* contact: the monolith settles */
+      ];
+      var CLIFF = 2;
+
+      var maxDpr = coarse ? 1.5 : 2;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      keyframes = narrow ? NARROW : WIDE;
-      /* Pull the camera back on tall screens so the structure keeps its proportion. */
-      distScale = clamp(1 + (1.5 - camera.aspect) * 0.55, 1, 2.1);
-      camera.updateProjectionMatrix();
-    }
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+      renderer.setClearColor(new THREE.Color(PALETTE.stone), 1);
+      renderer.toneMapping = THREE.NeutralToneMapping;
+      renderer.toneMappingExposure = 1;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFShadowMap;
+      /* Refraction is blurred by roughness anyway: sample it at reduced size */
+      renderer.transmissionResolutionScale = coarse ? 0.5 : 0.75;
 
-    layout();
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(LENS.fov, window.innerWidth / window.innerHeight, 1, 160);
 
-    var pos = new THREE.Vector3();
-    var look = new THREE.Vector3();
-    var tmp = new THREE.Vector3();
-    var bufferSize = new THREE.Vector2();
+      function tone(a, b, t) {
+        return new THREE.Color(a).lerp(new THREE.Color(b), t);
+      }
 
-    var smooth = {
-      stage: director.stage,
-      flow: director.flow,
-      px: 0,
-      py: 0
-    };
-
-    function frameAt(stage) {
-      var i0 = Math.floor(clamp(stage, 0, LAST));
-      var i1 = Math.min(i0 + 1, LAST);
-      var t = smoothstep(stage - i0);
-      var a = keyframes[i0];
-      var b = keyframes[i1];
-
-      pos.set(lerp(a.pos[0], b.pos[0], t), lerp(a.pos[1], b.pos[1], t), lerp(a.pos[2], b.pos[2], t));
-      look.set(lerp(a.look[0], b.look[0], t), lerp(a.look[1], b.look[1], t), lerp(a.look[2], b.look[2], t));
-
-      return {
-        shiftX: lerp(a.shift[0], b.shift[0], t),
-        shiftY: lerp(a.shift[1], b.shift[1], t),
-        intensity: lerp(a.intensity, b.intensity, t),
-        scale: lerp(a.scale, b.scale, t)
+      var uniforms = {
+        uSplit: { value: -2 },
+        uJoint: { value: JOINT },
+        uStone: { value: new THREE.Color(PALETTE.stone) },
+        uPetrol: { value: new THREE.Color(PALETTE.petrol) },
+        uAlbedo: { value: new THREE.Color(PALETTE.stone) },
+        uAlbedoDark: { value: tone(PALETTE.petrol, PALETTE.stone, 0.16) },
+        uLineDark: { value: tone(PALETTE.petrol, PALETTE.chalk, 0.42) },
+        uAmbientDark: { value: 0.55 },
+        uPulse: { value: new THREE.Color(PALETTE.seaLight).multiplyScalar(1.6) },
+        uPulseFilter: { value: new THREE.Color(PALETTE.seaLight) }
       };
-    }
+      /* The filter keeps the hue of sea green at full brightness */
+      var sea = uniforms.uPulseFilter.value;
+      sea.multiplyScalar(1 / Math.max(sea.r, sea.g, sea.b));
 
-    function paint(dt, snap) {
-      /* Heavy architecture: a low damping constant so it settles, not snaps. */
-      if (snap || reduced) {
-        smooth.stage = director.stage;
-        smooth.flow = director.flow;
-        smooth.px = director.pointerX;
-        smooth.py = director.pointerY;
-      } else {
-        smooth.stage = damp(smooth.stage, director.stage, 2.6, dt);
-        smooth.flow = damp(smooth.flow, director.flow, 3.2, dt);
-        smooth.px = damp(smooth.px, director.pointerX, 2.4, dt);
-        smooth.py = damp(smooth.py, director.pointerY, 2.4, dt);
+      /* Chapter split shared by every surface: pixels below the top edge of
+         #work use the dark palette. Measured in NDC so the reduced-size
+         transmission buffer splits in exactly the same place. */
+      var SPLIT_GLSL = [
+        'uniform float uSplit;',
+        'float darkMask(float ndcY){',
+        '  return clamp((uSplit - ndcY) / max(fwidth(ndcY), 1e-5) + 0.5, 0.0, 1.0);',
+        '}'
+      ].join('\n');
+
+      /* ---- Backdrop: stone above the split, petrol below; unlit, exact ---- */
+      var backdrop = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 2),
+        new THREE.ShaderMaterial({
+          uniforms: {
+            uSplit: uniforms.uSplit,
+            uStone: uniforms.uStone,
+            uPetrol: uniforms.uPetrol
+          },
+          depthTest: false,
+          depthWrite: false,
+          vertexShader: [
+            'varying float vNdcY;',
+            'void main(){',
+            '  vNdcY = position.y;',
+            '  gl_Position = vec4(position.xy, 0.0, 1.0);',
+            '}'
+          ].join('\n'),
+          fragmentShader: [
+            'uniform vec3 uStone;',
+            'uniform vec3 uPetrol;',
+            'varying float vNdcY;',
+            SPLIT_GLSL,
+            'void main(){',
+            '  gl_FragColor = vec4(mix(uStone, uPetrol, darkMask(vNdcY)), 1.0);',
+            '  #include <colorspace_fragment>',
+            '}'
+          ].join('\n')
+        })
+      );
+      backdrop.frustumCulled = false;
+      backdrop.renderOrder = -10;
+      scene.add(backdrop);
+
+      /* ---- Light: a low, hard key from the far end of the canyon -----------
+         Shadows run along the walls, stepping across the tops of the blocks
+         in front, instead of across the floor under the copy. */
+      var LIGHT_DIR = new THREE.Vector3(-0.14, 0.44, -0.89).normalize();
+
+      var key = new THREE.DirectionalLight(0xFFFFFF, 3.7);
+      key.castShadow = true;
+      key.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
+      key.shadow.bias = -0.0004;
+      key.shadow.normalBias = 0.03;
+      key.shadow.radius = 1;
+      scene.add(key);
+      scene.add(key.target);
+
+      scene.add(new THREE.HemisphereLight(PALETTE.chalk, PALETTE.petrol, 1.5));
+
+      /* ---- Studio environment, for the glass only ----------------------------
+         A petrol room with chalk softboxes and one sea green line: the glass
+         reflects nothing that is not in the palette.
+      ---------------------------------------------------------------------------- */
+      function studio() {
+        var room = new THREE.Scene();
+        var parts = [];
+
+        function add(geo, color, x, y, z, side) {
+          var mat = new THREE.MeshBasicMaterial({ color: color, side: side || THREE.DoubleSide });
+          var mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(x, y, z);
+          if (!side) mesh.lookAt(0, 0, 0);
+          room.add(mesh);
+          parts.push(geo, mat);
+        }
+
+        /* The slats are seen from above and in front: their faces mirror the
+           lower half of the room behind the camera, their crests the upper
+           half toward the key light. */
+        add(new THREE.BoxGeometry(30, 16, 30), tone(PALETTE.petrol, PALETTE.chalk, 0.18), 0, 2, 0, THREE.BackSide);
+        add(new THREE.PlaneGeometry(12, 5), new THREE.Color(PALETTE.chalk).multiplyScalar(3.2), -3, 9, -12);
+        add(new THREE.PlaneGeometry(26, 3), new THREE.Color(PALETTE.chalk).multiplyScalar(1.6), 0, -4, 13);
+        add(new THREE.PlaneGeometry(26, 0.5), new THREE.Color(PALETTE.seaLight).multiplyScalar(2.6), 0, -1, 14);
+
+        var pmrem = new THREE.PMREMGenerator(renderer);
+        var texture = pmrem.fromScene(room, 0.03).texture;
+        pmrem.dispose();
+        parts.forEach(function (p) { p.dispose(); });
+        return texture;
       }
 
-      if (!reduced) uniforms.uTime.value += dt;
-      uniforms.uStage.value = smooth.stage;
-      uniforms.uFlow.value = smooth.flow;
+      /* ---- Materials ----------------------------------------------------------- */
 
-      var frame = frameAt(smooth.stage);
-      uniforms.uIntensity.value = frame.intensity;
-      group.scale.setScalar(frame.scale);
+      /* Matte structure: heavy stone on the light chapter, lifted petrol on the
+         dark one, with hairline edges and module joints measured from the top,
+         so a block that sinks loses modules into the floor. */
+      var matteMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.94, metalness: 0 });
+      matteMat.onBeforeCompile = function (shader) {
+        shader.uniforms.uSplit = uniforms.uSplit;
+        shader.uniforms.uJoint = uniforms.uJoint;
+        shader.uniforms.uAlbedo = uniforms.uAlbedo;
+        shader.uniforms.uAlbedoDark = uniforms.uAlbedoDark;
+        shader.uniforms.uLineDark = uniforms.uLineDark;
+        shader.uniforms.uAmbientDark = uniforms.uAmbientDark;
 
-      /* Camera: dolly between compositions, scaled for the viewport. */
-      tmp.copy(pos).sub(look).multiplyScalar(distScale);
-      pos.copy(look).add(tmp);
-      pos.x += smooth.px * 0.32;
-      pos.y += -smooth.py * 0.2;
-      camera.position.copy(pos);
-      camera.lookAt(look);
+        shader.vertexShader = [
+          'varying vec3 vBlock;',
+          'varying vec3 vBlockSize;',
+          'varying vec3 vBlockNormal;',
+          'varying vec4 vClip;',
+          ''
+        ].join('\n') + shader.vertexShader
+          .replace('#include <begin_vertex>', [
+            '#include <begin_vertex>',
+            'vBlockSize = vec3(instanceMatrix[0][0], instanceMatrix[1][1], instanceMatrix[2][2]);',
+            'vBlock = position * vBlockSize;',
+            'vBlockNormal = normal;'
+          ].join('\n'))
+          .replace('#include <project_vertex>', [
+            '#include <project_vertex>',
+            'vClip = gl_Position;'
+          ].join('\n'));
 
-      var dist = tmp.length();
-      uniforms.uFogNear.value = dist * 0.92;
-      uniforms.uFogFar.value = dist * 1.7;
+        shader.fragmentShader = [
+          'uniform float uJoint;',
+          'uniform vec3 uAlbedo;',
+          'uniform vec3 uAlbedoDark;',
+          'uniform vec3 uLineDark;',
+          'uniform float uAmbientDark;',
+          'varying vec3 vBlock;',
+          'varying vec3 vBlockSize;',
+          'varying vec3 vBlockNormal;',
+          'varying vec4 vClip;',
+          SPLIT_GLSL,
+          ''
+        ].join('\n') + shader.fragmentShader
+          .replace('#include <color_fragment>', [
+            '#include <color_fragment>',
+            'float dm = darkMask(vClip.y / vClip.w);',
+            'vec3 an = abs(vBlockNormal);',
+            'vec3 rim = vec3(',
+            '  0.5 * vBlockSize.x - abs(vBlock.x),',
+            '  min(vBlock.y, vBlockSize.y - vBlock.y),',
+            '  0.5 * vBlockSize.z - abs(vBlock.z)',
+            ') + an * 1e3;',
+            'float edge = min(min(rim.x, rim.y), rim.z);',
+            'float lineE = 1.0 - smoothstep(0.0, max(fwidth(edge) * 1.25, 1e-4), edge);',
+            'float drop = vBlockSize.y - vBlock.y;',
+            'float gy = mod(drop, uJoint);',
+            'gy = min(gy, uJoint - gy) + an.y * 1e3;',
+            'float lineG = 1.0 - smoothstep(0.0, max(fwidth(drop) * 1.1, 1e-4), gy);',
+            'float line = max(lineE * 0.8, lineG * 0.45);',
+            'vec3 albedo = mix(uAlbedo, uAlbedoDark, dm);',
+            'vec3 ink = mix(albedo * 0.6, uLineDark, dm);',
+            'diffuseColor.rgb = mix(albedo, ink, line);'
+          ].join('\n'))
+          .replace('#include <lights_fragment_end>', [
+            '#include <lights_fragment_end>',
+            'reflectedLight.indirectDiffuse *= mix(1.0, uAmbientDark, dm);'
+          ].join('\n'));
+      };
 
-      /* Lens shift keeps the structure in the open half of the grid. */
-      camera.setViewOffset(viewW, viewH, -frame.shiftX * viewW, frame.shiftY * viewH, viewW, viewH);
+      /* Liquid glass: one refraction bounce (front faces only, so the renderer
+         never adds a back-face transmission pass), slight roughness, a thin
+         sea green body tint like the edge of float glass. */
+      var glassMat = new THREE.MeshPhysicalMaterial({
+        color: PALETTE.chalk,
+        metalness: 0,
+        roughness: 0.16,
+        transmission: 1,
+        ior: 1.5,
+        thickness: 0.5,
+        attenuationColor: PALETTE.seaLight,
+        attenuationDistance: 3.5,
+        specularIntensity: 1,
+        envMap: studio(),
+        envMapIntensity: 1,
+        side: THREE.FrontSide
+      });
+      /* The click pulse is sea green light carried by the glass. On petrol it
+         is pure emission; on stone, where added light would wash out to white,
+         the slat also filters what it transmits toward the same hue. */
+      glassMat.onBeforeCompile = function (shader) {
+        shader.uniforms.uSplit = uniforms.uSplit;
+        shader.uniforms.uPulse = uniforms.uPulse;
+        shader.uniforms.uPulseFilter = uniforms.uPulseFilter;
+        shader.vertexShader = [
+          'attribute float aPulse;',
+          'varying float vPulse;',
+          'varying vec4 vClip;',
+          ''
+        ].join('\n') + shader.vertexShader
+          .replace('#include <begin_vertex>', [
+            '#include <begin_vertex>',
+            'vPulse = aPulse;'
+          ].join('\n'))
+          .replace('#include <project_vertex>', [
+            '#include <project_vertex>',
+            'vClip = gl_Position;'
+          ].join('\n'));
+        shader.fragmentShader = [
+          'uniform vec3 uPulse;',
+          'uniform vec3 uPulseFilter;',
+          'varying float vPulse;',
+          'varying vec4 vClip;',
+          SPLIT_GLSL,
+          ''
+        ].join('\n') + shader.fragmentShader
+          .replace('#include <emissivemap_fragment>', [
+            '#include <emissivemap_fragment>',
+            'totalEmissiveRadiance += uPulse * vPulse;'
+          ].join('\n'))
+          .replace('#include <transmission_fragment>', [
+            '#include <transmission_fragment>',
+            'float lightSide = 1.0 - darkMask(vClip.y / vClip.w);',
+            'totalDiffuse *= mix(vec3(1.0), uPulseFilter, vPulse * lightSide);'
+          ].join('\n'));
+      };
 
-      /* Chapter split: read live scroll, not the damped value, so the
-         ground under the DOM always matches the section above it. */
-      renderer.getDrawingBufferSize(bufferSize);
-      var ratio = bufferSize.y / (canvas.clientHeight || viewH);
-      var workTop = metrics.workTopDoc - scrollY();
-      uniforms.uSplit.value = bufferSize.y - workTop * ratio;
+      /* ---- Instanced walls ------------------------------------------------------
+         Every slot (row, side, column) owns one matte and one glass instance;
+         whichever is not in use sits at zero scale.
+      ---------------------------------------------------------------------------- */
+      var matteGeo = new THREE.BoxGeometry(1, 1, 1);
+      matteGeo.translate(0, 0.5, 0); /* base on the floor, grows upward */
+      var glassGeo = matteGeo.clone();
 
-      renderer.render(scene, camera);
-    }
+      var pulseArr = new Float32Array(COUNT);
+      var pulseAttr = new THREE.InstancedBufferAttribute(pulseArr, 1);
+      pulseAttr.setUsage(THREE.DynamicDrawUsage);
+      glassGeo.setAttribute('aPulse', pulseAttr);
 
-    /* ---- Loop ---------------------------------------------------------------- */
-    var running = false;
-    var snapNext = true;
-    var lastT = 0;
+      var matte = new THREE.InstancedMesh(matteGeo, matteMat, COUNT);
+      var glass = new THREE.InstancedMesh(glassGeo, glassMat, COUNT);
+      [matte, glass].forEach(function (mesh) {
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.frustumCulled = false;
+        scene.add(mesh);
+      });
+      matte.castShadow = true;
+      matte.receiveShadow = true;
 
-    function step(t) {
-      if (!running) return;
-      var dt = Math.min((t - lastT) / 1000, 0.05);
-      lastT = t;
-      paint(dt, snapNext);
-      snapNext = false;
-      if (reduced) {
+      /* Per-slot state */
+      var height = new Float32Array(COUNT);
+      var base = new Float32Array(COUNT);
+      var depth = new Float32Array(COUNT);
+      var glassy = new Uint8Array(COUNT);
+      var rowOf = new Int32Array(COUNT);
+
+      /* Shadow catcher: the floor is the exact backdrop colour, only darker in shadow */
+      var ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        new THREE.ShadowMaterial({ color: PALETTE.ink, opacity: 0.14 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      /* ---- Deterministic noise -------------------------------------------------- */
+      function hash(n) {
+        var s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+        return s - Math.floor(s);
+      }
+
+      function vnoise(x) {
+        var i = Math.floor(x);
+        var f = x - i;
+        f = f * f * (3 - 2 * f);
+        return hash(i) + (hash(i + 1) - hash(i)) * f;
+      }
+
+      /* ---- Layout: fit the canyon to the copy ----------------------------------- */
+      var view = { w: 1, h: 1 };
+      var canyon = 6;            /* half width of the empty floor */
+      var zFar = -40;
+      var period = 60;
+      var rows = 60;
+      var cols = 10;
+      var travelPerPx = 0.01;
+      var edges = [];            /* region boundaries, as global row numbers */
+      var dirty = true;
+
+      var raycaster = new THREE.Raycaster();
+      var ndc = new THREE.Vector2();
+      var hit = new THREE.Vector3();
+      var probeA = new THREE.Vector3();
+      var probeB = new THREE.Vector3();
+      var UP = new THREE.Vector3(0, 1, 0);
+      var floorPlane = new THREE.Plane(UP, 0);
+      var crestPlane = new THREE.Plane(UP, -CREST_Y);
+      var roofPlane = new THREE.Plane(UP, -MAX_H);
+      var look = new THREE.Vector3();
+
+      function cast(nx, ny, plane, out) {
+        ndc.set(nx, ny);
+        raycaster.setFromCamera(ndc, camera);
+        return raycaster.ray.intersectPlane(plane, out);
+      }
+
+      function placeCamera(px, py) {
+        camera.position.set(
+          px * 0.9,
+          Math.sin(LENS.tilt) * LENS.dist - py * 0.6,
+          Math.cos(LENS.tilt) * LENS.dist
+        );
+        look.set(px * 0.3, 0, 0);
+        camera.lookAt(look);
+        camera.updateMatrixWorld();
+      }
+
+      /* Right edge of the copy column plus a margin, in NDC */
+      function columnEdge() {
+        var ref = document.querySelector('#hero .container');
+        var half = view.w / 2;
+        var edge = 0.62;
+        if (ref) {
+          var rect = ref.getBoundingClientRect();
+          var pad = parseFloat(window.getComputedStyle(ref).paddingLeft) || 0;
+          edge = (half - (rect.left + pad) + MARGIN_PX) / half;
+        }
+        return clamp(edge, 0.2, narrowQuery.matches ? NARROW_EDGE : 0.96);
+      }
+
+      function regions() {
+        /* A section's stretch begins where the canyon floor at mid screen sits
+           when that section's top edge crosses mid screen. */
+        edges.length = 0;
+        for (var i = 1; i < metrics.sectionTops.length; i++) {
+          var s = travelPerPx * (metrics.sectionTops[i] - view.h / 2);
+          edges.push(Math.round((s - zFar) / CELL));
+        }
+        dirty = true;
+      }
+
+      function regionOf(g) {
+        var n = 0;
+        while (n < edges.length && g >= edges[n]) n++;
+        return n;
+      }
+
+      var corner = new THREE.Vector3();
+
+      function fitShadow() {
+        var zNear = zFar + period;
+        var xMax = canyon + cols * CELL;
+        key.target.position.set(0, 0, (zFar + zNear) / 2);
+        key.position.copy(key.target.position).addScaledVector(LIGHT_DIR, 80);
+        key.target.updateMatrixWorld();
+        key.updateMatrixWorld();
+
+        var cam = key.shadow.camera;
+        cam.position.copy(key.position);
+        cam.lookAt(key.target.position);
+        cam.updateMatrixWorld();
+
+        var minX = Infinity, maxX = -Infinity;
+        var minY = Infinity, maxY = -Infinity;
+        var minZ = Infinity, maxZ = -Infinity;
+        for (var n = 0; n < 8; n++) {
+          corner.set(n & 1 ? xMax : -xMax, n & 2 ? MAX_H : 0, n & 4 ? zNear : zFar)
+            .applyMatrix4(cam.matrixWorldInverse);
+          minX = Math.min(minX, corner.x); maxX = Math.max(maxX, corner.x);
+          minY = Math.min(minY, corner.y); maxY = Math.max(maxY, corner.y);
+          minZ = Math.min(minZ, corner.z); maxZ = Math.max(maxZ, corner.z);
+        }
+        cam.left = minX;
+        cam.right = maxX;
+        cam.bottom = minY;
+        cam.top = maxY;
+        cam.near = Math.max(0.5, -maxZ - 2);
+        cam.far = -minZ + 2;
+        cam.updateProjectionMatrix();
+
+        ground.scale.set(xMax * 2 + 8, period + 8, 1);
+        ground.position.set(0, 0, (zFar + zNear) / 2);
+      }
+
+      function layout() {
+        view.w = window.innerWidth;
+        view.h = window.innerHeight;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+        renderer.setSize(view.w, view.h, false);
+        camera.aspect = view.w / view.h;
+        /* Portrait screens keep the horizontal field of a square frame, so a
+           phone sees the same canyon rather than a telephoto crop of it. */
+        camera.fov = camera.aspect < 1
+          ? 2 * Math.atan(Math.tan(LENS.fov * DEG / 2) / camera.aspect) / DEG
+          : LENS.fov;
+        camera.updateProjectionMatrix();
+        placeCamera(0, 0);
+
+        /* The foot of each wall meets the column edge at FIT_Y */
+        if (cast(columnEdge(), FIT_Y, floorPlane, hit)) canyon = Math.max(hit.x, CELL);
+
+        /* Rows: from past the top edge of the frame to where the tallest block
+           would still reach up into the bottom edge. Margins cover the sway. */
+        var far = cast(0, 1.08, floorPlane, hit) ? hit.z : -80;
+        var near = cast(0, -1.08, roofPlane, hit) ? hit.z : 20;
+        rows = Math.min(MAX_ROWS, Math.ceil((near - far + 6) / CELL));
+        period = rows * CELL;
+        zFar = near + 3 - period;
+
+        /* Columns: out past the far corner of the frame */
+        var reach = cast(1.08, 1.08, floorPlane, hit) ? hit.x : canyon + MAX_COLS;
+        cols = clamp(Math.ceil((reach - canyon) / CELL) + 2, 3, MAX_COLS);
+
+        /* Travel: the floor at mid screen moves at PARALLAX times page speed */
+        probeA.set(0, 0, 0).project(camera);
+        probeB.set(0, 0, -CELL).project(camera);
+        var pxPerUnit = Math.max(Math.abs(probeB.y - probeA.y) * view.h / 2, 1e-3);
+        travelPerPx = PARALLAX / pxPerUnit;
+
+        /* Slots are packed by (row, side, column) for the current column count:
+           reset them all, then only the live range is drawn and uploaded. */
+        matte.instanceMatrix.array.fill(0);
+        glass.instanceMatrix.array.fill(0);
+        pulseArr.fill(0);
+        rowOf.fill(-2147483647);
+        live = rows * 2 * cols;
+        matte.count = live;
+        glass.count = live;
+
+        regions();
+        fitShadow();
+      }
+
+      /* ---- Profiles ------------------------------------------------------------- */
+      function profileAt(g, side, c, i) {
+        var P = PROFILES[regionOf(g)];
+        var bay = wrap(g, P.bay);
+        var mass = Math.max(0, c - CLIFF + 1);
+        var m = P.base + P.rise * mass;
+        if (P.noise && mass) m += Math.floor(vnoise(g * 0.19 + c * 0.53 + side * 31.7) * P.noise);
+        if (P.zig) {
+          var half = P.bay / 2;
+          m += Math.round((half - Math.abs(bay - half)) * P.zig);
+        }
+        if (P.wave) m += Math.round(P.wave * (0.5 + 0.5 * Math.sin(g * 0.55 - c * 0.7 + side * 1.9)));
+        var isGlass = bay === 0;
+        if (isGlass) m += GLASS_RISE;
+        base[i] = clamp(m, 1, TALLEST) * MODULE;
+        glassy[i] = isGlass ? 1 : 0;
+        depth[i] = P.depth * CELL;
+      }
+
+      /* ---- Interaction state ---------------------------------------------------- */
+      var travel = 0;
+      var pointer = { nx: 0, ny: 0, inside: false };
+      var sway = { x: 0, y: 0 };
+      var well = { x: 0, z: 0, tx: 0, tz: 0, amt: 0 };
+      var ripples = [];
+
+      function ringAt(x, s) {
+        var v = 0;
+        for (var n = 0; n < ripples.length; n++) {
+          var rp = ripples[n];
+          var dx = x - rp.x;
+          var ds = s - rp.s;
+          var q = (Math.sqrt(dx * dx + ds * ds) - rp.radius) / rp.width;
+          if (q > -3 && q < 3) v += rp.energy * Math.exp(-q * q);
+        }
+        return v > 1 ? 1 : v;
+      }
+
+      function upload(attr, length) {
+        attr.clearUpdateRanges();
+        attr.addUpdateRange(0, length);
+        attr.needsUpdate = true;
+      }
+
+      function writeBox(a, i, x, z, sx, sy, sz) {
+        var o = i * 16;
+        a[o] = sx; a[o + 1] = 0; a[o + 2] = 0; a[o + 3] = 0;
+        a[o + 4] = 0; a[o + 5] = sy; a[o + 6] = 0; a[o + 7] = 0;
+        a[o + 8] = 0; a[o + 9] = 0; a[o + 10] = sz; a[o + 11] = 0;
+        a[o + 12] = x; a[o + 13] = 0; a[o + 14] = z; a[o + 15] = 1;
+      }
+
+      /* Walk every live slot: wrap rows along the canyon, resolve the profile of
+         rows that just came round, add the pointer well and click rings, then
+         ease each block toward its target height. Returns true while moving. */
+      function layBlocks(dt, still) {
+        var mA = matte.instanceMatrix.array;
+        var gA = glass.instanceMatrix.array;
+        var kH = still ? 1 : 1 - Math.exp(-HEIGHT_RATE * dt);
+        var kP = still ? 1 : 1 - Math.exp(-PULSE_RATE * dt);
+        var wellOn = well.amt > 0.002;
+        var inv = 1 / (WELL_SIGMA * WELL_SIGMA);
+        var ringOn = ripples.length > 0;
+        var busy = false;
+        var pulsed = false;
+
+        for (var r = 0; r < rows; r++) {
+          var z = zFar + wrap(r * CELL - travel, period);
+          var s = z + travel;
+          var g = Math.round((s - zFar) / CELL);
+
+          for (var side = 0; side < 2; side++) {
+            var dir = side ? 1 : -1;
+
+            for (var c = 0; c < cols; c++) {
+              var i = (r * 2 + side) * cols + c;
+              var fresh = rowOf[i] !== g;
+              if (fresh || dirty) {
+                profileAt(g, side, c, i);
+                rowOf[i] = g;
+              }
+
+              var x = dir * (canyon + (c + 0.5) * CELL);
+              var target = base[i];
+
+              if (wellOn) {
+                var dx = x - well.x;
+                var dz = z - well.z;
+                var q = (dx * dx + dz * dz) * inv;
+                if (q < 16) target -= WELL_DEPTH * well.amt * (1 - q) * Math.exp(-0.5 * q);
+              }
+
+              var ring = ringOn ? ringAt(x, s) : 0;
+              target += ring * RIPPLE_KICK;
+              if (target < MODULE * 0.5) target = MODULE * 0.5;
+
+              var h = (fresh || still) ? target : height[i] + (target - height[i]) * kH;
+              if (Math.abs(target - h) > 0.002) busy = true;
+              else h = target;
+              height[i] = h;
+
+              if (glassy[i]) {
+                writeBox(gA, i, x, z, GLASS_W * CELL, h, GLASS_D * CELL);
+                writeBox(mA, i, x, z, 0, 0, 0);
+                var p = pulseArr[i] + (ring - pulseArr[i]) * kP;
+                if (p < 0.001 && ring === 0) p = 0;
+                if (p !== pulseArr[i]) { pulseArr[i] = p; pulsed = true; }
+                if (p > 0) busy = true;
+              } else {
+                writeBox(mA, i, x, z, MATTE_W * CELL, h, depth[i]);
+                writeBox(gA, i, x, z, 0, 0, 0);
+                if (pulseArr[i] !== 0) { pulseArr[i] = 0; pulsed = true; }
+              }
+            }
+          }
+        }
+
+        dirty = false;
+        upload(matte.instanceMatrix, live * 16);
+        upload(glass.instanceMatrix, live * 16);
+        if (pulsed) upload(pulseAttr, live);
+        return busy;
+      }
+
+      /* ---- Frame ------------------------------------------------------------------ */
+      function paint(dt, snap) {
+        var still = snap || reduced;
+        var busy = false;
+
+        /* Travel along the canyon with the page */
+        var goal = reduced ? 0 : travelPerPx * scrollY();
+        travel = still ? goal : damp(travel, goal, TRAVEL_RATE, dt);
+        if (Math.abs(goal - travel) > 1e-4) busy = true;
+        else travel = goal;
+
+        /* A slight lens sway toward the pointer */
+        var live = pointer.inside && !reduced;
+        var aimX = live ? pointer.nx : 0;
+        var aimY = live ? pointer.ny : 0;
+        sway.x = still ? aimX : damp(sway.x, aimX, SWAY_RATE, dt);
+        sway.y = still ? aimY : damp(sway.y, aimY, SWAY_RATE, dt);
+        if (Math.abs(aimX - sway.x) + Math.abs(aimY - sway.y) > 1e-4) busy = true;
+        placeCamera(sway.x, sway.y);
+
+        /* Proximity: raycast the cursor onto the crest of the walls */
+        var want = 0;
+        if (live && cast(pointer.nx, -pointer.ny, crestPlane, hit)) {
+          want = 1;
+          well.tx = hit.x;
+          well.tz = hit.z;
+        }
+        if (still || well.amt < 0.02) {
+          well.x = well.tx;
+          well.z = well.tz;
+        } else {
+          well.x = damp(well.x, well.tx, WELL_FOLLOW, dt);
+          well.z = damp(well.z, well.tz, WELL_FOLLOW, dt);
+        }
+        well.amt = still ? want : damp(well.amt, want, WELL_RATE, dt);
+        if (Math.abs(want - well.amt) > 1e-3 || Math.abs(well.tx - well.x) + Math.abs(well.tz - well.z) > 1e-3) busy = true;
+
+        /* Click rings: the front eases out, the energy decays */
+        for (var n = ripples.length - 1; n >= 0; n--) {
+          var rp = ripples[n];
+          rp.radius = damp(rp.radius, RIPPLE_REACH, RIPPLE_SPEED, dt);
+          rp.energy = damp(rp.energy, 0, RIPPLE_FADE, dt);
+          rp.width = RING_WIDTH + rp.radius * 0.06;
+          if (rp.energy < 0.004) ripples.splice(n, 1);
+        }
+        if (ripples.length) busy = true;
+
+        if (layBlocks(dt, still)) busy = true;
+
+        /* Chapter split: read live scroll, not the damped value, so the
+           ground under the DOM always matches the section above it. */
+        var workTop = metrics.workTopDoc - scrollY();
+        uniforms.uSplit.value = 1 - 2 * workTop / (canvas.clientHeight || view.h);
+
+        renderer.render(scene, camera);
+        return busy;
+      }
+
+      /* ---- Loop: runs only while something is still settling ------------------------ */
+      var running = false;
+      var snapNext = true;
+      var lost = false;
+      var lastT = 0;
+
+      function step(t) {
+        if (!running) return;
+        var dt = clamp((t - lastT) / 1000, 0, 0.05);
+        lastT = t;
+        var busy = paint(dt, snapNext);
+        snapNext = false;
+        if (!busy || reduced) {
+          running = false;
+          return;
+        }
+        raf(step);
+      }
+
+      function play() {
+        if (running || lost || document.hidden) return;
+        running = true;
+        lastT = clock();
+        raf(step);
+      }
+
+      function pause() {
         running = false;
-        return;
       }
-      raf(step);
-    }
 
-    function play() {
-      if (running || document.hidden) return;
-      running = true;
-      lastT = clock();
-      raf(step);
-    }
-
-    function pause() {
-      running = false;
-    }
-
-    paint(0, true);
-    root.setAttribute('data-webgl', 'on');
-    boot.step();
-
-    onResizeFrame(function () {
-      layout();
-      snapNext = true;
-      play();
-    });
-
-    /* With reduced motion there is no loop: one static frame per scroll. */
-    onScrollFrame(function () {
-      if (reduced) play();
-    });
-
-    onMedia(reducedQuery, function (e) {
-      reduced = e.matches;
-      snapNext = true;
-      play();
-    });
-
-    onMedia(narrowQuery, function (e) {
-      narrow = e.matches;
-      layout();
-      snapNext = true;
-      play();
-    });
-
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden) {
-        pause();
-        return;
+      function ripple(nx, ny) {
+        if (!cast(nx, ny, crestPlane, hit)) return;
+        if (ripples.length >= MAX_RIPPLES) ripples.shift();
+        ripples.push({ x: hit.x, s: hit.z + travel, radius: 0, width: RING_WIDTH, energy: 1 });
+        play();
       }
-      snapNext = true;
-      play();
-    });
 
-    canvas.addEventListener('webglcontextlost', function (e) {
-      e.preventDefault();
-      pause();
-      root.setAttribute('data-webgl', 'off');
-    });
-
-    canvas.addEventListener('webglcontextrestored', function () {
+      layout();
+      paint(0, true);
       root.setAttribute('data-webgl', 'on');
-      snapNext = true;
-      play();
-    });
+      boot.step();
 
-    window.addEventListener('pagehide', function () {
-      pause();
-      try { renderer.dispose(); } catch (err) { /* already released */ }
-    });
+      /* ---- Events -------------------------------------------------------------------- */
+      onResizeFrame(function () {
+        layout();
+        snapNext = true;
+        play();
+      });
 
-    play();
+      onScrollFrame(function () {
+        play();
+      });
+
+      if (!coarse) {
+        window.addEventListener('pointermove', function (e) {
+          if (e.pointerType === 'touch') return;
+          pointer.nx = (e.clientX / view.w) * 2 - 1;
+          pointer.ny = (e.clientY / view.h) * 2 - 1;
+          pointer.inside = true;
+          play();
+        }, PASSIVE);
+
+        document.addEventListener('mouseout', function (e) {
+          if (e.relatedTarget) return;
+          pointer.inside = false;
+          play();
+        });
+
+        window.addEventListener('blur', function () {
+          pointer.inside = false;
+          play();
+        });
+      }
+
+      /* A click on the page itself (not on a control) sends a pulse */
+      var CONTROLS = 'a, button, input, select, textarea, label, summary, [role="button"]';
+      document.addEventListener('click', function (e) {
+        if (reduced || e.button !== 0 || e.detail === 0) return;
+        if (e.target && e.target.closest && e.target.closest(CONTROLS)) return;
+        ripple((e.clientX / view.w) * 2 - 1, 1 - (e.clientY / view.h) * 2);
+      });
+
+      onMedia(reducedQuery, function (e) {
+        reduced = e.matches;
+        ripples.length = 0;
+        snapNext = true;
+        play();
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          pause();
+          return;
+        }
+        snapNext = true;
+        play();
+      });
+
+      canvas.addEventListener('webglcontextlost', function (e) {
+        e.preventDefault();
+        lost = true;
+        pause();
+        root.setAttribute('data-webgl', 'off');
+      });
+
+      canvas.addEventListener('webglcontextrestored', function () {
+        lost = false;
+        /* The environment lives in a render target: its pixels did not survive */
+        var stale = glassMat.envMap;
+        glassMat.envMap = studio();
+        if (stale) stale.dispose();
+        root.setAttribute('data-webgl', 'on');
+        dirty = true;
+        snapNext = true;
+        play();
+      });
+
+      /* Keep the renderer when the page goes into the back/forward cache */
+      window.addEventListener('pagehide', function (e) {
+        pause();
+        if (e.persisted) return;
+        try { renderer.dispose(); } catch (err) { /* already released */ }
+      });
+
+      window.addEventListener('pageshow', function (e) {
+        if (!e.persisted) return;
+        snapNext = true;
+        play();
+      });
+    }
   })();
 })();

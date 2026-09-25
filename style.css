@@ -59,6 +59,9 @@
   --section-y: var(--s-96);
   --masthead-h: 72px;
   --container: 1240px;
+  /* The copy column: the empty floor between the two walls of the stage.
+     The stage measures this column and fits the canyon to it. */
+  --canyon: var(--container);
 
   /* Hit areas and icons (multiples of 4) */
   --tap-sm: 40px;
@@ -126,6 +129,12 @@ html[data-chapter="dark"] {
   --glass: var(--glass-on-dark);
   --signal: var(--sea-light);
   color: var(--fg);
+}
+
+@media (min-width: 900px) {
+  :root {
+    --canyon: clamp(600px, 62vw, 840px);
+  }
 }
 
 @media (min-width: 1024px) {
@@ -356,7 +365,9 @@ strong {
 }
 
 /* --------------------------------------------------------------------------
-   4. Layout: 12-column grid inside a fixed-width container
+   4. Layout: masthead and footer span the full container; every section
+      sits in the canyon, a centred column with its own 12-column grid.
+      The periphery is left to the architecture.
    -------------------------------------------------------------------------- */
 .container {
   width: 100%;
@@ -365,6 +376,10 @@ strong {
   margin-right: auto;
   padding-left: var(--gutter);
   padding-right: var(--gutter);
+}
+
+main .container {
+  max-width: calc(var(--canyon) + 2 * var(--gutter));
 }
 
 .grid {
@@ -409,31 +424,16 @@ strong {
   .section-head {
     margin-bottom: var(--s-48);
   }
+}
 
-  .col-hero {
-    grid-column: 1 / span 7;
-  }
-
+/* Once the canyon is wide enough, About splits into heading and body */
+@media (min-width: 1200px) {
   .col-head {
     grid-column: 1 / span 5;
   }
 
   .col-body {
     grid-column: 6 / span 7;
-  }
-
-  .col-cap {
-    grid-column: span 3;
-  }
-
-  .col-contact {
-    grid-column: 1 / span 6;
-  }
-}
-
-@media (min-width: 1200px) {
-  .col-hero {
-    grid-column: 1 / span 8;
   }
 }
 
@@ -995,6 +995,7 @@ html[data-chapter="dark"] .masthead {
    9. Stage: one fixed WebGL canvas owns every section background.
       The canvas paints stone above the top edge of #work and petrol below
       it, so the DOM stays transparent and the architecture reads through.
+      Its two walls are fitted to the canyon column on every resize.
    -------------------------------------------------------------------------- */
 .stage {
   position: fixed;
@@ -1021,7 +1022,7 @@ html[data-webgl="off"] .stage,
   display: none;
 }
 
-/* Static fallback: a quiet field of vertical slats, masked to the right */
+/* Static fallback: two quiet banks of vertical slats either side of the canyon */
 .stage-fallback {
   position: fixed;
   top: 0;
@@ -1032,8 +1033,8 @@ html[data-webgl="off"] .stage,
   display: none;
   pointer-events: none;
   background: repeating-linear-gradient(90deg, transparent 0 12px, rgb(var(--ink-rgb) / .07) 12px 13px);
-  -webkit-mask-image: linear-gradient(90deg, transparent 40%, #000 100%);
-  mask-image: linear-gradient(90deg, transparent 40%, #000 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, transparent 24%, transparent 76%, #000 100%);
+  mask-image: linear-gradient(90deg, #000 0%, transparent 24%, transparent 76%, #000 100%);
 }
 
 html[data-chapter="dark"] .stage-fallback {
@@ -1057,10 +1058,14 @@ html:not([data-webgl="on"]) #contact {
 }
 
 /* --------------------------------------------------------------------------
-   10. Section scrims: they hold contrast on the text side only, leaving
-       the opposite side of the grid open for the architecture.
+   10. Section scrims. On phones the walls step in behind the copy, so the
+       scrim is a full veil. From 900px it is a band down the canyon only:
+       it steadies the long shadows under the text and leaves the walls on
+       the periphery untouched.
    -------------------------------------------------------------------------- */
 .scrim {
+  --veil: var(--stone-rgb);
+  --veil-a: .72;
   position: absolute;
   top: 0;
   right: 0;
@@ -1070,10 +1075,14 @@ html:not([data-webgl="on"]) #contact {
   pointer-events: none;
 }
 
+.scene-dark > .scrim {
+  --veil: var(--petrol-rgb);
+}
+
 .scrim--hero {
   background: linear-gradient(180deg,
-    rgb(var(--stone-rgb) / .24) 0%,
-    rgb(var(--stone-rgb) / .72) 32%,
+    rgb(var(--stone-rgb) / .56) 0%,
+    rgb(var(--stone-rgb) / .84) 24%,
     rgb(var(--stone-rgb) / .94) 64%);
 }
 
@@ -1103,40 +1112,27 @@ html:not([data-webgl="on"]) #contact {
 }
 
 @media (min-width: 900px) {
-  .scrim--hero {
-    background: linear-gradient(90deg,
-      rgb(var(--stone-rgb) / .94) 0%,
-      rgb(var(--stone-rgb) / .80) 40%,
-      rgb(var(--stone-rgb) / 0) 64%);
-  }
-
-  /* About: body copy sits right, the architecture settles bottom-left */
-  .scrim--about {
-    background: linear-gradient(270deg,
-      rgb(var(--stone-rgb) / .94) 0%,
-      rgb(var(--stone-rgb) / .84) 52%,
-      rgb(var(--stone-rgb) / 0) 64%);
-  }
-
-  .scrim--capabilities {
-    background: linear-gradient(180deg,
-      rgb(var(--stone-rgb) / .72) 0%,
-      rgb(var(--stone-rgb) / 0) 40%);
-  }
-
-  .scrim--work {
-    background: linear-gradient(90deg,
-      rgb(var(--petrol-rgb) / .94) 0%,
-      rgb(var(--petrol-rgb) / .84) 44%,
-      rgb(var(--petrol-rgb) / .40) 76%,
-      rgb(var(--petrol-rgb) / .24) 100%);
-  }
-
+  .scrim,
+  .scrim--hero,
+  .scrim--about,
+  .scrim--capabilities,
+  .scrim--work,
   .scrim--contact {
+    --edge: calc(50% - var(--canyon) / 2 - var(--s-32));
     background: linear-gradient(90deg,
-      rgb(var(--petrol-rgb) / .96) 0%,
-      rgb(var(--petrol-rgb) / .86) 44%,
-      rgb(var(--petrol-rgb) / 0) 64%);
+      rgb(var(--veil) / 0) calc(var(--edge) - var(--s-64)),
+      rgb(var(--veil) / var(--veil-a)) var(--edge),
+      rgb(var(--veil) / var(--veil-a)) calc(100% - var(--edge)),
+      rgb(var(--veil) / 0) calc(100% - var(--edge) + var(--s-64)));
+  }
+
+  .scrim--hero {
+    --veil-a: .6;
+  }
+
+  .scrim--work,
+  .scrim--contact {
+    --veil-a: .8;
   }
 }
 
