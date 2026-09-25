@@ -387,22 +387,41 @@
   /* ------------------------------------------------------------------------
      Stage
      ------------------------------------------------------------------------ */
-  var THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.min.js';
+  /* Same build from two CDNs: the second is only tried if the first fails */
+  var THREE_URLS = [
+    'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.min.js',
+    'https://unpkg.com/three@0.185.1/build/three.module.min.js'
+  ];
+
+  function loadThree(i) {
+    return import(THREE_URLS[i])['catch'](function (err) {
+      if (i + 1 < THREE_URLS.length) return loadThree(i + 1);
+      throw err;
+    });
+  }
 
   (function stage() {
     var canvas = document.getElementById('stage');
 
-    function unavailable() {
+    /* Falls back to the static slats, and says why in the console */
+    function unavailable(reason) {
       root.setAttribute('data-webgl', 'off');
+      if (window.console && console.warn) {
+        console.warn('Stage: showing the static fallback. ' + (reason && reason.message ? reason.message : reason));
+      }
       boot.step();
     }
 
-    if (!canvas || !('WebGL2RenderingContext' in window)) {
-      unavailable();
+    if (!canvas) return;
+
+    if (!('WebGL2RenderingContext' in window)) {
+      unavailable('This browser has no WebGL 2.');
       return;
     }
 
-    import(THREE_URL).then(build)['catch'](unavailable);
+    loadThree(0).then(build, function (err) {
+      unavailable('three.js could not be loaded: ' + (err && err.message ? err.message : err));
+    })['catch'](unavailable);
 
     function build(THREE) {
       var renderer;
@@ -414,7 +433,7 @@
           powerPreference: 'high-performance'
         });
       } catch (err) {
-        unavailable();
+        unavailable('WebGL 2 is disabled or unavailable on this device: ' + err.message);
         return;
       }
 
@@ -436,9 +455,14 @@
       var GLASS_D = 0.24;       /* glass slats are thin along the canyon */
       var GLASS_RISE = 4;       /* modules a slat stands proud of its bay */
 
-      /* Lens: a long lens looking down the canyon, so walls read as walls
-         and the floor between them stays a calm, even ground. */
-      var LENS = { fov: 22, tilt: 58 * DEG, dist: 48 };
+      /* Lenses. Landscape screens look down the canyon at a moderate angle,
+         close enough that the walls lean out of frame and converge toward the
+         far end. Portrait screens keep the horizontal field of a square frame
+         from higher up, so a phone sees the same canyon rather than a
+         telephoto crop of it. */
+      var LENS_WIDE = { fov: 34, tilt: 50 * DEG, dist: 32 };
+      var LENS_TALL = { fov: 22, tilt: 58 * DEG, dist: 48 };
+      var LENS = LENS_WIDE;
       var FIT_Y = 0.55;         /* NDC height at which the wall base meets the column edge */
       var MARGIN_PX = 48;       /* air between the copy and the foot of each wall */
       var NARROW_EDGE = 0.8;    /* on phones the walls rise from the outer edges */
@@ -480,7 +504,15 @@
       var CLIFF = 2;
 
       var maxDpr = coarse ? 1.5 : 2;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+      var MAX_PIXELS = 6e6;     /* drawing buffer budget: keeps 4K and 5K screens in GPU memory */
+
+      function pixelRatio() {
+        var dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+        var area = Math.max(window.innerWidth * window.innerHeight, 1);
+        return Math.max(1, Math.min(dpr, Math.sqrt(MAX_PIXELS / area)));
+      }
+
+      renderer.setPixelRatio(pixelRatio());
       renderer.setSize(window.innerWidth, window.innerHeight, false);
       renderer.setClearColor(new THREE.Color(PALETTE.stone), 1);
       renderer.toneMapping = THREE.NeutralToneMapping;
@@ -894,11 +926,10 @@
       function layout() {
         view.w = window.innerWidth;
         view.h = window.innerHeight;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+        renderer.setPixelRatio(pixelRatio());
         renderer.setSize(view.w, view.h, false);
         camera.aspect = view.w / view.h;
-        /* Portrait screens keep the horizontal field of a square frame, so a
-           phone sees the same canyon rather than a telephoto crop of it. */
+        LENS = camera.aspect < 1 ? LENS_TALL : LENS_WIDE;
         camera.fov = camera.aspect < 1
           ? 2 * Math.atan(Math.tan(LENS.fov * DEG / 2) / camera.aspect) / DEG
           : LENS.fov;
