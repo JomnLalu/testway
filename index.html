@@ -7,7 +7,7 @@
   <meta name="description" content="Jonathan Immanuel Montolalu is an independent AI and data science engineer in Indonesia. He fine-tunes language models and builds Python systems: MangARTI, IterMath and BSQShuttle.">
   <link rel="canonical" href="https://jomontolalu.com/">
   <meta name="author" content="Jonathan Immanuel Montolalu">
-  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="theme-color" content="#E5E6E1" id="themeColor">
 
   <meta property="og:type" content="profile">
@@ -17,6 +17,7 @@
   <meta property="og:description" content="Fine-tuned language models and Python systems in daily use: a Manadonese translation model, a math drilling app, and a live shuttle tracker for Binus Square.">
   <meta property="og:url" content="https://jomontolalu.com/">
   <meta property="og:image" content="https://jomontolalu.com/assets/og-image.png">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Jonathan Montolalu - AI and data science engineer">
@@ -47,7 +48,7 @@
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.min.js">
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.core.min.js">
 
-  <link rel="stylesheet" href="style.css?v=2026-09-25">
+  <link rel="stylesheet" href="style.css?v=2026-10-02">
 
   <script>document.documentElement.classList.remove('no-js');</script>
 
@@ -60,6 +61,7 @@
         "@id": "https://jomontolalu.com/#website",
         "url": "https://jomontolalu.com/",
         "name": "Jonathan Montolalu",
+        "description": "Jonathan Immanuel Montolalu is an independent AI and data science engineer in Indonesia. He fine-tunes language models and builds Python systems: MangARTI, IterMath and BSQShuttle.",
         "inLanguage": "en",
         "publisher": { "@id": "https://jomontolalu.com/#person" }
       },
@@ -70,6 +72,7 @@
         "name": "Jonathan Montolalu | AI & data science engineer, Indonesia",
         "description": "Jonathan Immanuel Montolalu is an independent AI and data science engineer in Indonesia. He fine-tunes language models and builds Python systems: MangARTI, IterMath and BSQShuttle.",
         "inLanguage": "en",
+        "dateModified": "2026-10-02",
         "isPartOf": { "@id": "https://jomontolalu.com/#website" },
         "about": { "@id": "https://jomontolalu.com/#person" },
         "mainEntity": { "@id": "https://jomontolalu.com/#person" },
@@ -85,6 +88,7 @@
         "@id": "https://jomontolalu.com/#primaryimage",
         "url": "https://jomontolalu.com/assets/og-image.png",
         "contentUrl": "https://jomontolalu.com/assets/og-image.png",
+        "encodingFormat": "image/png",
         "width": 1200,
         "height": 630,
         "caption": "Jonathan Montolalu - AI and data science engineer"
@@ -126,7 +130,11 @@
         "@id": "https://jomontolalu.com/#mangarti",
         "name": "MangARTI",
         "url": "https://huggingface.co/Jmnlalu/MangARTI",
-        "codeRepository": "https://huggingface.co/Jmnlalu/MangARTI",
+        "codeRepository": "https://github.com/JomnLalu/MangARTI",
+        "sameAs": [
+          "https://huggingface.co/Jmnlalu/MangARTI",
+          "https://github.com/JomnLalu/MangARTI"
+        ],
         "description": "A fine-tuned large language model that translates formal Bahasa Indonesia into the Manadonese dialect.",
         "inLanguage": "id",
         "author": { "@id": "https://jomontolalu.com/#person" },
@@ -177,7 +185,7 @@
     </div>
   </div>
 
-  <canvas class="stage" id="stage" aria-hidden="true"></canvas>
+  <canvas class="stage" id="stage" aria-hidden="true" role="presentation"></canvas>
   <div class="stage-fallback" aria-hidden="true"></div>
 
   <header class="masthead" id="masthead" data-open="false" data-scrolled="false">
@@ -209,13 +217,13 @@
     </div>
   </header>
 
-  <main id="main">
+  <main id="main" tabindex="-1">
 
     <section class="section scene-light" id="hero" aria-labelledby="hero-title">
       <div class="scrim scrim--hero" aria-hidden="true"></div>
       <div class="container">
         <div class="grid">
-          <div class="col-hero flow">
+          <div class="col-full flow">
             <p class="t-kicker boot-in">Jonathan Immanuel Montolalu: independent AI &amp; data science engineer, Indonesia</p>
             <h1 class="t-display boot-in" id="hero-title">A language model that speaks Manadonese. A math drill that sticks. A shuttle you can actually catch.</h1>
             <p class="t-lead boot-in">
@@ -340,32 +348,43 @@
           <div class="col-full" data-reveal>
             <ul class="work-list" role="list">
 
+              <!-- Two destinations, so the card is not a link: its footer splits into two -->
               <li class="work-item">
-                <a class="work-link" href="https://huggingface.co/Jmnlalu/MangARTI" target="_blank" rel="noopener noreferrer">
-                  <div>
-                    <h3 class="t-h3 work-item__name">MangARTI</h3>
-                    <p class="work-item__body">
-                      A fine-tuned large language model that translates formal Bahasa Indonesia into the
-                      Manadonese dialect.
-                    </p>
-                    <p class="work-item__foot">
-                      <span><b>Language model</b></span>
-                      <span>Published on Hugging Face</span>
-                    </p>
+                <article class="work-card work-card--split">
+                  <h3 class="t-h3 work-item__name" id="work-mangarti">MangARTI</h3>
+                  <p class="work-item__body">
+                    A fine-tuned large language model that translates formal Bahasa Indonesia into the
+                    Manadonese dialect.
+                  </p>
+                  <p class="work-item__foot">
+                    <span><b>Language model</b></span>
+                    <span>Published on Hugging Face</span>
+                  </p>
+                  <div class="split" role="group" aria-labelledby="work-mangarti">
+                    <a class="split__link split__link--code" href="https://github.com/JomnLalu/MangARTI" target="_blank" rel="noopener noreferrer">
+                      <span>View Code</span>
+                      <svg class="split__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+                        <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      <span class="sr-only">Opens MangARTI on GitHub in a new tab</span>
+                    </a>
+                    <a class="split__link split__link--model" href="https://huggingface.co/Jmnlalu/MangARTI" target="_blank" rel="noopener noreferrer">
+                      <span>View Model</span>
+                      <svg class="split__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+                        <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      <span class="sr-only">Opens MangARTI on Hugging Face in a new tab</span>
+                    </a>
                   </div>
-                  <span class="work-item__icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" focusable="false">
-                      <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                  <span class="sr-only">Opens MangARTI on Hugging Face in a new tab</span>
-                </a>
+                </article>
               </li>
 
               <li class="work-item">
-                <a class="work-link" href="https://itermath.jomontolalu.com" target="_blank" rel="noopener noreferrer">
+                <article class="work-card work-card--link">
                   <div>
-                    <h3 class="t-h3 work-item__name">IterMath</h3>
+                    <h3 class="t-h3 work-item__name">
+                      <a class="work-link" href="https://itermath.jomontolalu.com" target="_blank" rel="noopener noreferrer">IterMath<span class="sr-only">Opens IterMath in a new tab</span></a>
+                    </h3>
                     <p class="work-item__body">
                       A simple web app that builds fluency in core math concepts through repeated
                       practice.
@@ -380,14 +399,15 @@
                       <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </span>
-                  <span class="sr-only">Opens IterMath in a new tab</span>
-                </a>
+                </article>
               </li>
 
               <li class="work-item">
-                <a class="work-link" href="https://bsqshuttle.jomontolalu.com" target="_blank" rel="noopener noreferrer">
+                <article class="work-card work-card--link">
                   <div>
-                    <h3 class="t-h3 work-item__name">BSQShuttle</h3>
+                    <h3 class="t-h3 work-item__name">
+                      <a class="work-link" href="https://bsqshuttle.jomontolalu.com" target="_blank" rel="noopener noreferrer">BSQShuttle<span class="sr-only">Opens BSQShuttle in a new tab</span></a>
+                    </h3>
                     <p class="work-item__body">
                       An unofficial schedule tracker for the Binus Square shuttle bus, giving students
                       departure and arrival times across the Kemanggisan, Alam Sutera, and JWC/FX routes.
@@ -402,14 +422,15 @@
                       <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </span>
-                  <span class="sr-only">Opens BSQShuttle in a new tab</span>
-                </a>
+                </article>
               </li>
 
               <li class="work-item">
-                <a class="work-link" href="https://www.instagram.com/codingclub.rex/" target="_blank" rel="noopener noreferrer">
+                <article class="work-card work-card--link">
                   <div>
-                    <h3 class="t-h3 work-item__name">Rex Mundi Coding Club</h3>
+                    <h3 class="t-h3 work-item__name">
+                      <a class="work-link" href="https://www.instagram.com/codingclub.rex/" target="_blank" rel="noopener noreferrer">Rex Mundi Coding Club<span class="sr-only">Opens the Rex Mundi Coding Club Instagram in a new tab</span></a>
+                    </h3>
                     <p class="work-item__body">
                       A student-led high school organisation I co-founded with some partner, founded to help
                       other students with practical programming skills.
@@ -424,8 +445,7 @@
                       <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </span>
-                  <span class="sr-only">Opens the Rex Mundi Coding Club Instagram in a new tab</span>
-                </a>
+                </article>
               </li>
 
             </ul>
@@ -438,7 +458,7 @@
       <div class="scrim scrim--contact" aria-hidden="true"></div>
       <div class="container">
         <div class="grid">
-          <div class="col-contact flow" data-reveal>
+          <div class="col-full flow" data-reveal>
             <h2 class="t-h2" id="contact-title">Let's Connect!</h2>
             <p class="t-lead t-quiet">
               Have a cool project that aligns with my interests, or just have something to say?
@@ -487,6 +507,6 @@
   </footer>
 
   <!-- Bump ?v= on every release: a stale cached script.js with this page shows only the fallback -->
-  <script src="script.js?v=2026-09-25" defer></script>
+  <script src="script.js?v=2026-10-02" defer></script>
 </body>
 </html>

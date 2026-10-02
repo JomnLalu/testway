@@ -131,14 +131,15 @@
     var done = 0;
     var finished = false;
 
+    /* The bar scales instead of resizing: compositor only, no layout */
     function paint() {
-      if (bar) bar.style.width = Math.round((done / total) * 100) + '%';
+      if (bar) bar.style.transform = 'scaleX(' + (done / total) + ')';
     }
 
     function finish() {
       if (finished) return;
       finished = true;
-      if (bar) bar.style.width = '100%';
+      if (bar) bar.style.transform = 'scaleX(1)';
       if (label) label.textContent = 'Ready';
       window.setTimeout(function () {
         if (el) el.setAttribute('data-done', 'true');
@@ -200,6 +201,12 @@
     document.addEventListener('click', function (e) {
       if (masthead.getAttribute('data-open') !== 'true') return;
       if (!masthead.contains(e.target)) setMenu(false);
+    });
+
+    /* Tabbing out of the open menu closes it, so it never hangs over the page */
+    masthead.addEventListener('focusout', function (e) {
+      if (masthead.getAttribute('data-open') !== 'true') return;
+      if (e.relatedTarget && !masthead.contains(e.relatedTarget)) setMenu(false);
     });
 
     onMedia(narrowQuery, function (e) {
@@ -519,6 +526,8 @@
       renderer.toneMappingExposure = 1;
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFShadowMap;
+      /* The light never moves: the shadow map is redrawn only when blocks do */
+      renderer.shadowMap.autoUpdate = false;
       /* Refraction is blurred by roughness anyway: sample it at reduced size */
       renderer.transmissionResolutionScale = coarse ? 0.5 : 0.75;
 
@@ -818,7 +827,9 @@
       }
 
       /* ---- Layout: fit the canyon to the copy ----------------------------------- */
-      var view = { w: 1, h: 1 };
+      /* w, h, dpr: the size the buffer and camera were built for.
+         cssH: the canvas height on screen now, refreshed on every resize. */
+      var view = { w: 1, h: 1, dpr: 1, cssH: 1 };
       var canyon = 6;            /* half width of the empty floor */
       var zFar = -40;
       var period = 60;
@@ -871,13 +882,17 @@
 
       function regions() {
         /* A section's stretch begins where the canyon floor at mid screen sits
-           when that section's top edge crosses mid screen. */
-        edges.length = 0;
+           when that section's top edge crosses mid screen. Profiles are only
+           re-resolved when a boundary actually moved. */
         for (var i = 1; i < metrics.sectionTops.length; i++) {
           var s = travelPerPx * (metrics.sectionTops[i] - view.h / 2);
-          edges.push(Math.round((s - zFar) / CELL));
+          var g = Math.round((s - zFar) / CELL);
+          if (edges[i - 1] !== g) {
+            edges[i - 1] = g;
+            dirty = true;
+          }
         }
-        dirty = true;
+        edges.length = metrics.sectionTops.length - 1;
       }
 
       function regionOf(g) {
@@ -923,11 +938,23 @@
         ground.position.set(0, 0, (zFar + zNear) / 2);
       }
 
+      /* On touch screens the browser toolbar changes the height while
+         scrolling: within this slack the buffer is kept and simply scaled. */
+      var HEIGHT_SLACK = coarse ? 160 : 0;
+
+      function viewportChanged() {
+        return window.innerWidth !== view.w ||
+          Math.abs(window.innerHeight - view.h) > HEIGHT_SLACK ||
+          pixelRatio() !== view.dpr;
+      }
+
       function layout() {
         view.w = window.innerWidth;
         view.h = window.innerHeight;
-        renderer.setPixelRatio(pixelRatio());
+        view.dpr = pixelRatio();
+        renderer.setPixelRatio(view.dpr);
         renderer.setSize(view.w, view.h, false);
+        view.cssH = canvas.clientHeight || view.h;
         camera.aspect = view.w / view.h;
         LENS = camera.aspect < 1 ? LENS_TALL : LENS_WIDE;
         camera.fov = camera.aspect < 1
@@ -969,6 +996,8 @@
 
         regions();
         fitShadow();
+        dirty = true;
+        renderer.shadowMap.needsUpdate = true;
       }
 
       /* ---- Profiles ------------------------------------------------------------- */
@@ -1107,9 +1136,9 @@
         else travel = goal;
 
         /* A slight lens sway toward the pointer */
-        var live = pointer.inside && !reduced;
-        var aimX = live ? pointer.nx : 0;
-        var aimY = live ? pointer.ny : 0;
+        var tracking = pointer.inside && !reduced;
+        var aimX = tracking ? pointer.nx : 0;
+        var aimY = tracking ? pointer.ny : 0;
         sway.x = still ? aimX : damp(sway.x, aimX, SWAY_RATE, dt);
         sway.y = still ? aimY : damp(sway.y, aimY, SWAY_RATE, dt);
         if (Math.abs(aimX - sway.x) + Math.abs(aimY - sway.y) > 1e-4) busy = true;
@@ -1117,7 +1146,7 @@
 
         /* Proximity: raycast the cursor onto the crest of the walls */
         var want = 0;
-        if (live && cast(pointer.nx, -pointer.ny, crestPlane, hit)) {
+        if (tracking && cast(pointer.nx, -pointer.ny, crestPlane, hit)) {
           want = 1;
           well.tx = hit.x;
           well.tz = hit.z;
@@ -1142,18 +1171,33 @@
         }
         if (ripples.length) busy = true;
 
-        if (layBlocks(dt, still)) busy = true;
+        /* Blocks: walked only when something that shapes them changed. A frame
+           that only sways the lens reuses the instance buffers and shadow map. */
+        var shaped = still || dirty || blocksBusy || ripples.length > 0 ||
+          travel !== drawn.travel || well.amt !== drawn.amt ||
+          (well.amt > 0.002 && (well.x !== drawn.x || well.z !== drawn.z));
+        if (shaped) {
+          blocksBusy = layBlocks(dt, still);
+          drawn.travel = travel;
+          drawn.amt = well.amt;
+          drawn.x = well.x;
+          drawn.z = well.z;
+          renderer.shadowMap.needsUpdate = true;
+        }
+        if (blocksBusy) busy = true;
 
         /* Chapter split: read live scroll, not the damped value, so the
            ground under the DOM always matches the section above it. */
         var workTop = metrics.workTopDoc - scrollY();
-        uniforms.uSplit.value = 1 - 2 * workTop / (canvas.clientHeight || view.h);
+        uniforms.uSplit.value = 1 - 2 * workTop / view.cssH;
 
         renderer.render(scene, camera);
         return busy;
       }
 
       /* ---- Loop: runs only while something is still settling ------------------------ */
+      var blocksBusy = true;
+      var drawn = { travel: NaN, amt: NaN, x: NaN, z: NaN };
       var running = false;
       var snapNext = true;
       var lost = false;
@@ -1196,9 +1240,17 @@
       boot.step();
 
       /* ---- Events -------------------------------------------------------------------- */
+      /* The body observer also lands here when only the document reflows
+         (fonts, content): then the frame is untouched and only the section
+         stretches are re-measured. Buffers are rebuilt for real viewport changes. */
       onResizeFrame(function () {
-        layout();
-        snapNext = true;
+        view.cssH = canvas.clientHeight || window.innerHeight;
+        if (viewportChanged()) {
+          layout();
+          snapNext = true;
+        } else {
+          regions();
+        }
         play();
       });
 
@@ -1208,9 +1260,9 @@
 
       if (!coarse) {
         window.addEventListener('pointermove', function (e) {
-          if (e.pointerType === 'touch') return;
+          if (reduced || e.pointerType === 'touch') return;
           pointer.nx = (e.clientX / view.w) * 2 - 1;
-          pointer.ny = (e.clientY / view.h) * 2 - 1;
+          pointer.ny = (e.clientY / view.cssH) * 2 - 1;
           pointer.inside = true;
           play();
         }, PASSIVE);
@@ -1232,7 +1284,7 @@
       document.addEventListener('click', function (e) {
         if (reduced || e.button !== 0 || e.detail === 0) return;
         if (e.target && e.target.closest && e.target.closest(CONTROLS)) return;
-        ripple((e.clientX / view.w) * 2 - 1, 1 - (e.clientY / view.h) * 2);
+        ripple((e.clientX / view.w) * 2 - 1, 1 - (e.clientY / view.cssH) * 2);
       });
 
       onMedia(reducedQuery, function (e) {

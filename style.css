@@ -2,6 +2,7 @@
    jomontolalu.com
    Design tokens -> base -> type -> layout -> components -> stage -> sections
    Spacing: strict 4px scale. Radius: 4px everywhere. Borders: 1px hairlines.
+   No shadows: depth comes from the stage, never from the UI.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -40,6 +41,7 @@
   --lift: var(--lift-on-light);
   --glass: var(--glass-on-light);
   --signal: var(--sea-deep);
+  --on-signal: var(--stone);
 
   /* 4px spacing scale */
   --s-4: 4px;
@@ -70,6 +72,7 @@
   --icon-sm: 16px;
   --icon-md: 24px;
   --facts-key-col: 200px;
+  --split-w: 320px;
 
   /* Type: one display face, one body face */
   --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
@@ -91,8 +94,11 @@
   --radius: 4px;
   --blur: 12px;
   --ease: cubic-bezier(.2, .7, .2, 1);
+  /* Heavy and physical: a slow start, a firm stop, never past the target */
+  --ease-heavy: cubic-bezier(.65, 0, .15, 1);
   --t-fast: 160ms;
   --t-base: 240ms;
+  --t-heavy: 360ms;
   --t-slow: 420ms;
 
   color-scheme: light;
@@ -106,6 +112,7 @@ html[data-chapter="dark"] {
   --lift: var(--lift-on-dark);
   --glass: var(--glass-on-dark);
   --signal: var(--sea-light);
+  --on-signal: var(--petrol);
   color-scheme: dark;
 }
 
@@ -118,6 +125,7 @@ html[data-chapter="dark"] {
   --lift: var(--lift-on-light);
   --glass: var(--glass-on-light);
   --signal: var(--sea-deep);
+  --on-signal: var(--stone);
   color: var(--fg);
 }
 
@@ -128,6 +136,7 @@ html[data-chapter="dark"] {
   --lift: var(--lift-on-dark);
   --glass: var(--glass-on-dark);
   --signal: var(--sea-light);
+  --on-signal: var(--petrol);
   color: var(--fg);
 }
 
@@ -174,16 +183,15 @@ html[data-chapter="dark"] {
 
 body {
   margin: 0;
-  background: transparent;
   color: var(--fg);
   font-family: var(--font-body);
   font-size: var(--size-body);
   font-weight: 400;
   line-height: 1.75;
+  overflow-wrap: break-word;
   overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: color var(--t-slow) var(--ease);
 }
 
 img,
@@ -203,7 +211,6 @@ ol {
 p,
 dl,
 dd,
-dt,
 figure {
   margin: 0;
 }
@@ -222,36 +229,32 @@ strong {
   font-weight: 600;
 }
 
-:focus {
-  outline: 2px solid var(--signal);
-  outline-offset: var(--s-4);
-  border-radius: var(--radius);
-}
-
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
+/* One focus treatment for every control, shown for keyboard use only */
 :focus-visible {
   outline: 2px solid var(--signal);
   outline-offset: var(--s-4);
   border-radius: var(--radius);
 }
 
+/* Programmatic focus targets (the skip link lands on <main>) draw no ring */
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .skip {
   position: absolute;
   left: var(--s-16);
   top: var(--s-16);
-  transform: translateY(-200%);
   z-index: 100;
-  background: var(--ink);
-  color: var(--stone);
   padding: var(--s-12) var(--s-16);
   border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--stone);
   font-family: var(--font-display);
   font-size: var(--size-xs);
   font-weight: 500;
   text-decoration: none;
+  transform: translateY(-200%);
   transition: transform var(--t-fast) var(--ease);
 }
 
@@ -266,7 +269,6 @@ strong {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
@@ -275,87 +277,71 @@ strong {
 /* --------------------------------------------------------------------------
    3. Type ramp
    -------------------------------------------------------------------------- */
-.t-display {
+.t-display,
+.t-h2,
+.t-h3 {
+  margin: 0;
   font-family: var(--font-display);
-  font-weight: 700;
+  text-wrap: balance;
+}
+
+.t-display {
+  max-width: var(--measure-display);
   font-size: var(--size-display);
+  font-weight: 700;
   line-height: 0.98;
   letter-spacing: -0.04em;
-  max-width: var(--measure-display);
-  margin: 0;
-  text-wrap: balance;
 }
 
 .t-h2 {
-  font-family: var(--font-display);
-  font-weight: 600;
+  max-width: 22ch;
   font-size: var(--size-h2);
+  font-weight: 600;
   line-height: 1.08;
   letter-spacing: -0.028em;
-  max-width: 22ch;
-  margin: 0;
-  text-wrap: balance;
 }
 
 .t-h3 {
-  font-family: var(--font-display);
-  font-weight: 600;
+  max-width: 26ch;
   font-size: var(--size-h3);
+  font-weight: 600;
   line-height: 1.25;
   letter-spacing: -0.018em;
-  max-width: 26ch;
-  margin: 0;
-  text-wrap: balance;
 }
 
 .t-lead {
-  font-family: var(--font-body);
-  font-weight: 400;
+  max-width: var(--measure-lead);
   font-size: var(--size-lead);
   line-height: 1.55;
-  max-width: var(--measure-lead);
   text-wrap: pretty;
 }
 
 .t-body {
-  font-size: var(--size-body);
-  line-height: 1.75;
   max-width: var(--measure);
   text-wrap: pretty;
 }
 
 .t-kicker {
+  max-width: 54ch;
   font-family: var(--font-display);
   font-size: var(--size-sm);
   font-weight: 500;
   line-height: 1.5;
   letter-spacing: -0.005em;
   color: var(--fg-mid);
-  max-width: 54ch;
 }
 
 .t-quiet {
   color: var(--fg-mid);
 }
 
+/* Vertical rhythm: 24px by default, tightened or opened by what precedes */
 .flow > * + * {
   margin-top: var(--flow-space, var(--s-24));
 }
 
-.flow > .t-kicker + * {
-  --flow-space: var(--s-24);
-}
-
 .flow > .t-display + * {
   --flow-space: var(--s-32);
-}
-
-.flow > .t-h2 + * {
-  --flow-space: var(--s-24);
-}
-
-.flow > .t-h3 + * {
-  --flow-space: var(--s-12);
 }
 
 .flow > .actions,
@@ -406,11 +392,9 @@ main .container {
 }
 
 .col-full,
-.col-hero,
 .col-head,
 .col-body,
-.col-cap,
-.col-contact {
+.col-cap {
   grid-column: 1 / -1;
 }
 
@@ -470,7 +454,7 @@ main .container {
 
 .btn--solid {
   --btn-bg: var(--fg);
-  --btn-fg: var(--bg);
+  --btn-fg: var(--on-signal);
   --btn-line: var(--fg);
 }
 
@@ -479,18 +463,9 @@ main .container {
   --btn-line: var(--signal);
 }
 
-.scene-dark .btn--solid,
-html[data-chapter="dark"] .btn--solid {
-  --btn-fg: var(--petrol);
-}
-
-.scene-light .btn--solid {
-  --btn-fg: var(--stone);
-}
-
 .btn--ghost {
+  --btn-bg: var(--glass);
   --btn-line: var(--line);
-  background: var(--glass);
 }
 
 .btn--ghost:hover {
@@ -504,13 +479,13 @@ html[data-chapter="dark"] .btn--solid {
 
 /* Square spinner, in keeping with the modular block language */
 .btn__spinner {
+  display: none;
   width: var(--icon-sm);
   height: var(--icon-sm);
   flex: none;
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: var(--radius);
-  display: none;
 }
 
 .btn[data-state="working"] .btn__spinner {
@@ -526,7 +501,7 @@ html[data-chapter="dark"] .btn--solid {
 
 .btn[data-state="done"] {
   --btn-line: var(--signal);
-  color: var(--signal);
+  --btn-fg: var(--signal);
 }
 
 .status {
@@ -536,19 +511,6 @@ html[data-chapter="dark"] .btn--solid {
   font-size: var(--size-xs);
   line-height: 1.45;
   color: var(--fg-mid);
-}
-
-.link {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.18em;
-  text-decoration-color: var(--line);
-  transition: text-decoration-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
-}
-
-.link:hover {
-  text-decoration-color: currentColor;
-  color: var(--signal);
 }
 
 /* Facts list */
@@ -574,19 +536,16 @@ html[data-chapter="dark"] .btn--solid {
 }
 
 .facts__val {
-  font-size: var(--size-body);
   line-height: 1.6;
 }
 
-/* Capability cards: frosted panels over the architecture */
+/* Capability cards: panels on the canyon floor */
 .cap {
   height: 100%;
   padding: var(--s-32);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--glass);
-  -webkit-backdrop-filter: blur(var(--blur));
-  backdrop-filter: blur(var(--blur));
 }
 
 .cap__title {
@@ -594,14 +553,15 @@ html[data-chapter="dark"] .btn--solid {
 }
 
 .cap__body {
-  font-size: var(--size-body);
+  max-width: 42ch;
   line-height: 1.7;
   color: var(--fg-mid);
-  max-width: 42ch;
   text-wrap: pretty;
 }
 
-/* Work list */
+/* Work list. A card with one destination is a link: its title, stretched
+   over the whole card, so the link is named by the title alone. MangARTI
+   has two destinations, so its footer becomes the split control below. */
 .work-list {
   border-top: 1px solid var(--line);
 }
@@ -610,26 +570,41 @@ html[data-chapter="dark"] .btn--solid {
   border-bottom: 1px solid var(--line);
 }
 
-.work-link {
+.work-card {
+  position: relative;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   column-gap: var(--s-24);
-  row-gap: var(--s-12);
   padding: var(--s-32) var(--s-16);
   margin-left: calc(var(--s-16) * -1);
   margin-right: calc(var(--s-16) * -1);
   border-radius: var(--radius);
-  text-decoration: none;
   transition: background-color var(--t-base) var(--ease);
 }
 
-.work-link:hover {
-  background: var(--lift);
+.work-card--split {
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.work-link:hover .work-item__name {
-  color: var(--signal);
+.work-link {
+  text-decoration: none;
+}
+
+.work-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+}
+
+.work-link:focus-visible {
+  outline: none;
+}
+
+.work-link:focus-visible::after {
+  outline: 2px solid var(--signal);
+  outline-offset: -2px;
 }
 
 .work-item__name {
@@ -637,19 +612,18 @@ html[data-chapter="dark"] .btn--solid {
 }
 
 .work-item__body {
+  max-width: 54ch;
   margin-top: var(--s-12);
-  font-size: var(--size-body);
   line-height: 1.7;
   color: var(--fg-mid);
-  max-width: 54ch;
   text-wrap: pretty;
 }
 
 .work-item__foot {
-  margin-top: var(--s-24);
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-4) var(--s-24);
+  margin-top: var(--s-24);
   font-family: var(--font-display);
   font-size: var(--size-xs);
   line-height: 1.45;
@@ -662,11 +636,11 @@ html[data-chapter="dark"] .btn--solid {
 }
 
 .work-item__icon {
+  display: grid;
+  place-items: center;
   width: var(--tap-sm);
   height: var(--tap-sm);
   flex: none;
-  display: grid;
-  place-items: center;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--fg-mid);
@@ -676,10 +650,150 @@ html[data-chapter="dark"] .btn--solid {
     transform var(--t-base) var(--ease);
 }
 
-.work-link:hover .work-item__icon {
+.work-card--link:hover {
+  background: var(--lift);
+}
+
+.work-card--link:hover .work-item__name {
+  color: var(--signal);
+}
+
+.work-card--link:hover .work-item__icon {
   color: var(--signal);
   border-color: var(--signal);
   transform: translate(2px, -2px);
+}
+
+/* Split control: one bar, two links.
+   At rest it reads as a single unit. On hover a hairline divides it and a
+   sea green block slides under the hovered half. The block belongs to the
+   second link (::before) but is positioned against the whole control, so
+   sibling selectors alone can move it. Everything that moves is a
+   transform inside the bar's own box: no reflow, nothing outside it. */
+.split {
+  --inset: var(--s-4);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  max-width: var(--split-w);
+  margin-top: var(--s-24);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--glass);
+  transition: border-color var(--t-base) var(--ease-heavy);
+}
+
+.split__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-8);
+  min-height: var(--tap-lg);
+  padding: var(--s-12) var(--s-16);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: var(--size-sm);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--t-heavy) var(--ease-heavy);
+}
+
+.split__icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex: none;
+}
+
+/* The hairline between the halves: hidden at rest */
+.split__link--code::after {
+  content: "";
+  position: absolute;
+  top: var(--s-12);
+  bottom: var(--s-12);
+  left: calc(50% - .5px);
+  width: 1px;
+  background: var(--line);
+  transform: scaleY(0);
+  transition: transform var(--t-base) var(--ease-heavy);
+}
+
+/* The highlight: parked as a zero-width block on the centre line.
+   Left half: grows out of the centre. Right half: the same block, shifted
+   by its own width plus the gap. Switching halves is a straight slide. */
+.split__link--model::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: var(--inset);
+  bottom: var(--inset);
+  left: var(--inset);
+  width: calc(50% - var(--inset) * 1.5);
+  background: var(--signal);
+  transform-origin: right center;
+  transform: translateX(0) scaleX(0);
+  transition: transform var(--t-heavy) var(--ease-heavy);
+}
+
+/* Keyboard: the focused half takes the highlight and an inner ring */
+.split__link:focus-visible {
+  color: var(--on-signal);
+  outline-offset: -2px;
+}
+
+.split:focus-within {
+  border-color: var(--fg);
+}
+
+.split:focus-within .split__link--code::after {
+  transform: scaleY(1);
+}
+
+.split__link--code:focus-visible + .split__link--model::before {
+  transform: translateX(0) scaleX(1);
+}
+
+.split__link--code + .split__link--model:focus-visible::before {
+  transform: translateX(calc(100% + var(--inset))) scaleX(1);
+}
+
+/* Pointer: declared after focus so the half under the cursor always wins */
+@media (hover: hover) {
+  .split:hover {
+    border-color: var(--fg);
+  }
+
+  .split:hover .split__link--code::after {
+    transform: scaleY(1);
+  }
+
+  .split:hover .split__link {
+    color: var(--fg-mid);
+  }
+
+  .split:hover .split__link:hover {
+    color: var(--on-signal);
+  }
+
+  .split__link--code:hover + .split__link--model::before {
+    transform: translateX(0) scaleX(1);
+  }
+
+  .split__link--code + .split__link--model:hover::before {
+    transform: translateX(calc(100% + var(--inset))) scaleX(1);
+  }
+}
+
+/* Touch screens never hover: show both halves as distinct targets */
+@media (hover: none) {
+  .split__link--code::after {
+    transform: scaleY(1);
+  }
 }
 
 /* Contact channels */
@@ -727,11 +841,15 @@ html[data-chapter="dark"] .btn--solid {
   left: 0;
   z-index: 30;
   padding-top: env(safe-area-inset-top, 0px);
+  border-bottom: 1px solid transparent;
   background: rgb(var(--stone-rgb) / .88);
+  color: var(--fg);
   -webkit-backdrop-filter: saturate(140%) blur(var(--blur));
   backdrop-filter: saturate(140%) blur(var(--blur));
-  border-bottom: 1px solid transparent;
-  transition: background-color var(--t-slow) var(--ease), border-color var(--t-base) var(--ease);
+  transition:
+    background-color var(--t-slow) var(--ease),
+    color var(--t-slow) var(--ease),
+    border-color var(--t-base) var(--ease);
 }
 
 html[data-chapter="dark"] .masthead {
@@ -744,10 +862,6 @@ html[data-chapter="dark"] .masthead {
 
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .masthead {
-    background: var(--bg);
-  }
-
-  .cap {
     background: var(--bg);
   }
 }
@@ -764,12 +878,12 @@ html[data-chapter="dark"] .masthead {
   display: inline-flex;
   align-items: center;
   gap: var(--s-12);
-  text-decoration: none;
   font-family: var(--font-display);
   font-size: var(--size-sm);
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.015em;
+  text-decoration: none;
 }
 
 .wordmark__mark {
@@ -812,9 +926,9 @@ html[data-chapter="dark"] .masthead {
   gap: var(--s-8);
   min-height: var(--tap-md);
   padding: var(--s-8) var(--s-12);
-  background: transparent;
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  background: transparent;
   font-family: var(--font-display);
   font-size: var(--size-xs);
   font-weight: 500;
@@ -849,8 +963,8 @@ html[data-chapter="dark"] .masthead {
     top: 100%;
     left: 0;
     right: 0;
-    background: var(--bg);
     border-bottom: 1px solid var(--line);
+    background: var(--bg);
     visibility: hidden;
     opacity: 0;
     transform: translateY(-4px);
@@ -879,7 +993,6 @@ html[data-chapter="dark"] .masthead {
     padding-bottom: var(--s-16);
     border-bottom: 1px solid var(--line);
     font-size: var(--size-body);
-    font-family: var(--font-display);
   }
 
   .nav__list li:last-child a {
@@ -895,11 +1008,6 @@ html[data-chapter="dark"] .masthead {
   .masthead__cta {
     display: inline-flex;
   }
-
-  .nav {
-    visibility: visible;
-    opacity: 1;
-  }
 }
 
 /* --------------------------------------------------------------------------
@@ -908,19 +1016,20 @@ html[data-chapter="dark"] .masthead {
 .site-footer {
   position: relative;
   z-index: 10;
-  background: var(--petrol);
-  color: var(--chalk-mid);
-  border-top: 1px solid var(--line-on-dark);
   padding-top: var(--s-48);
   padding-bottom: calc(var(--s-48) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line-on-dark);
+  background: var(--petrol);
+  color: var(--chalk-mid);
+  --signal: var(--sea-light);
 }
 
 .site-footer__inner {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-16) var(--s-48);
   align-items: baseline;
   justify-content: space-between;
+  gap: var(--s-16) var(--s-48);
   font-family: var(--font-display);
   font-size: var(--size-xs);
   line-height: 1.6;
@@ -939,15 +1048,12 @@ html[data-chapter="dark"] .masthead {
    -------------------------------------------------------------------------- */
 .boot {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0;
   z-index: 60;
-  background: var(--stone);
   display: grid;
   align-content: end;
   padding: var(--s-64) var(--gutter) calc(var(--s-64) + env(safe-area-inset-bottom, 0px));
+  background: var(--stone);
   transition: opacity var(--t-slow) var(--ease), visibility var(--t-slow);
 }
 
@@ -977,18 +1083,20 @@ html[data-chapter="dark"] .masthead {
 }
 
 .boot__track {
-  height: 1px;
   width: 100%;
-  background: var(--line-on-light);
+  height: 1px;
   overflow: hidden;
+  background: var(--line-on-light);
 }
 
 .boot__bar {
   display: block;
+  width: 100%;
   height: 100%;
-  width: 0%;
   background: var(--ink);
-  transition: width var(--t-base) var(--ease);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--t-base) var(--ease);
 }
 
 /* --------------------------------------------------------------------------
@@ -996,21 +1104,17 @@ html[data-chapter="dark"] .masthead {
       The canvas paints stone above the top edge of #work and petrol below
       it, so the DOM stays transparent and the architecture reads through.
       Its two walls are fitted to the canyon column on every resize.
+      A WebGL canvas is already its own compositor layer: strict
+      containment keeps it from ever taking part in page layout or paint.
    -------------------------------------------------------------------------- */
 .stage {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0;
+  z-index: 0;
   width: 100%;
   height: 100%;
-  z-index: 0;
   pointer-events: none;
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  contain: layout paint style;
+  contain: strict;
 }
 
 html:not([data-webgl="on"]) .stage {
@@ -1024,21 +1128,19 @@ html[data-webgl="off"] .stage,
 
 /* Static fallback: two quiet banks of vertical slats either side of the canyon */
 .stage-fallback {
+  --slat: var(--ink-rgb);
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0;
   z-index: 0;
   display: none;
   pointer-events: none;
-  background: repeating-linear-gradient(90deg, transparent 0 12px, rgb(var(--ink-rgb) / .07) 12px 13px);
+  background: repeating-linear-gradient(90deg, transparent 0 12px, rgb(var(--slat) / .07) 12px 13px);
   -webkit-mask-image: linear-gradient(90deg, #000 0%, transparent 24%, transparent 76%, #000 100%);
   mask-image: linear-gradient(90deg, #000 0%, transparent 24%, transparent 76%, #000 100%);
 }
 
 html[data-chapter="dark"] .stage-fallback {
-  background: repeating-linear-gradient(90deg, transparent 0 12px, rgb(var(--chalk-rgb) / .07) 12px 13px);
+  --slat: var(--chalk-rgb);
 }
 
 html[data-webgl="off"] .stage-fallback,
@@ -1058,21 +1160,26 @@ html:not([data-webgl="on"]) #contact {
 }
 
 /* --------------------------------------------------------------------------
-   10. Section scrims. On phones the walls step in behind the copy, so the
-       scrim is a full veil. From 900px it is a band down the canyon only:
-       it steadies the long shadows under the text and leaves the walls on
-       the periphery untouched.
+   10. Section scrims. On phones the walls rise behind the edges of the
+       copy, so the scrim is a full-width veil: top, middle (at 32%) and
+       end opacity per section. From 900px it is a band down the canyon
+       only: it steadies the long shadows under the text and leaves the
+       walls on the periphery untouched.
    -------------------------------------------------------------------------- */
 .scrim {
   --veil: var(--stone-rgb);
-  --veil-a: .72;
+  --veil-top: .56;
+  --veil-mid: .86;
+  --veil-end: .86;
+  --band: .72;
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0;
   z-index: -1;
   pointer-events: none;
+  background: linear-gradient(180deg,
+    rgb(var(--veil) / var(--veil-top)) 0%,
+    rgb(var(--veil) / var(--veil-mid)) 32%,
+    rgb(var(--veil) / var(--veil-end)) 100%);
 }
 
 .scene-dark > .scrim {
@@ -1080,59 +1187,38 @@ html:not([data-webgl="on"]) #contact {
 }
 
 .scrim--hero {
-  background: linear-gradient(180deg,
-    rgb(var(--stone-rgb) / .56) 0%,
-    rgb(var(--stone-rgb) / .84) 24%,
-    rgb(var(--stone-rgb) / .94) 64%);
-}
-
-.scrim--about {
-  background: linear-gradient(180deg,
-    rgb(var(--stone-rgb) / .56) 0%,
-    rgb(var(--stone-rgb) / .86) 32%,
-    rgb(var(--stone-rgb) / .86) 100%);
+  --veil-end: .94;
+  --band: .6;
 }
 
 .scrim--capabilities {
-  background: rgb(var(--stone-rgb) / .48);
+  --veil-top: .48;
+  --veil-mid: .48;
+  --veil-end: .48;
 }
 
 .scrim--work {
-  background: linear-gradient(180deg,
-    rgb(var(--petrol-rgb) / .64) 0%,
-    rgb(var(--petrol-rgb) / .84) 24%,
-    rgb(var(--petrol-rgb) / .84) 100%);
+  --veil-top: .64;
+  --veil-mid: .84;
+  --veil-end: .84;
+  --band: .8;
 }
 
 .scrim--contact {
-  background: linear-gradient(180deg,
-    rgb(var(--petrol-rgb) / .92) 0%,
-    rgb(var(--petrol-rgb) / .84) 48%,
-    rgb(var(--petrol-rgb) / .48) 100%);
+  --veil-top: .92;
+  --veil-mid: .84;
+  --veil-end: .48;
+  --band: .8;
 }
 
 @media (min-width: 900px) {
-  .scrim,
-  .scrim--hero,
-  .scrim--about,
-  .scrim--capabilities,
-  .scrim--work,
-  .scrim--contact {
+  .scrim {
     --edge: calc(50% - var(--canyon) / 2 - var(--s-32));
     background: linear-gradient(90deg,
       rgb(var(--veil) / 0) calc(var(--edge) - var(--s-64)),
-      rgb(var(--veil) / var(--veil-a)) var(--edge),
-      rgb(var(--veil) / var(--veil-a)) calc(100% - var(--edge)),
+      rgb(var(--veil) / var(--band)) var(--edge),
+      rgb(var(--veil) / var(--band)) calc(100% - var(--edge)),
       rgb(var(--veil) / 0) calc(100% - var(--edge) + var(--s-64)));
-  }
-
-  .scrim--hero {
-    --veil-a: .6;
-  }
-
-  .scrim--work,
-  .scrim--contact {
-    --veil-a: .8;
   }
 }
 
@@ -1177,7 +1263,7 @@ html:not([data-webgl="on"]) #contact {
     align-items: baseline;
   }
 
-  .work-link {
+  .work-card {
     padding-left: var(--s-24);
     padding-right: var(--s-24);
     margin-left: calc(var(--s-24) * -1);
@@ -1243,10 +1329,7 @@ html[data-booted="true"] .boot-in:nth-child(4) {
     scroll-behavior: auto !important;
   }
 
-  [data-reveal] {
-    opacity: 1;
-  }
-
+  [data-reveal],
   .boot-in {
     opacity: 1;
     transform: none;
@@ -1262,7 +1345,9 @@ html[data-booted="true"] .boot-in:nth-child(4) {
   .stage-fallback,
   .boot,
   .skip,
-  .scrim {
+  .scrim,
+  .work-item__icon,
+  .split__link--model::before {
     display: none !important;
   }
 
@@ -1290,8 +1375,18 @@ html[data-booted="true"] .boot-in:nth-child(4) {
     transform: none !important;
   }
 
-  .work-link[href]::after {
+  .split {
+    display: block;
+    border: 0;
+  }
+
+  .work-link::after,
+  .split__link::after {
     content: " (" attr(href) ")";
+    position: static;
+    width: auto;
+    background: none;
+    transform: none;
     font-size: var(--size-xs);
   }
 }
