@@ -1,5 +1,6 @@
 /* ==========================================================================
    jomontolalu.com
+   One stylesheet for every page: index, about, capabilities, work, contact.
    Design tokens -> base -> type -> layout -> components -> stage -> sections
    Spacing: strict 4px scale. Radius: 4px everywhere. Borders: 1px hairlines.
    No shadows: depth comes from the stage, never from the UI.
@@ -60,6 +61,9 @@
   --gutter: var(--s-24);
   --section-y: var(--s-96);
   --masthead-h: 72px;
+  /* Top of an inner page: the section rhythm, but never closer than 48px
+     under the fixed masthead (phones, notches) */
+  --page-top: max(var(--section-y), calc(var(--masthead-h) + var(--s-48) + env(safe-area-inset-top, 0px)));
   --container: 1240px;
   /* The copy column: the empty floor between the two walls of the stage.
      The stage measures this column and fits the canyon to it. */
@@ -182,6 +186,10 @@ html[data-chapter="dark"] {
 }
 
 body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
   margin: 0;
   color: var(--fg);
   font-family: var(--font-body);
@@ -354,7 +362,20 @@ strong {
    4. Layout: masthead and footer span the full container; every section
       sits in the canyon, a centred column with its own 12-column grid.
       The periphery is left to the architecture.
+      Each page is one section. It fills the space between the masthead and
+      the footer, so the footer never floats above the bottom of the screen.
    -------------------------------------------------------------------------- */
+main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+
+main > .section {
+  flex: 1 0 auto;
+  padding-top: var(--page-top);
+}
+
 .container {
   width: 100%;
   max-width: var(--container);
@@ -912,8 +933,17 @@ html[data-chapter="dark"] .masthead {
 }
 
 .nav a:hover,
-.nav a[aria-current="location"] {
+.nav a[aria-current="page"] {
   color: var(--fg);
+}
+
+/* The current page: full ink plus a signal hairline, so the state never
+   rests on colour alone */
+.nav a[aria-current="page"] {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--signal);
+  text-underline-offset: var(--s-8);
 }
 
 .masthead__cta {
@@ -1044,7 +1074,9 @@ html[data-chapter="dark"] .masthead {
 }
 
 /* --------------------------------------------------------------------------
-   8. Boot overlay
+   8. Boot overlay: plays on the first page of a visit, in that page's
+      chapter. Later pages skip it (data-boot="warm", set in each <head>):
+      the copy enters at once and the stage fades in when it is ready.
    -------------------------------------------------------------------------- */
 .boot {
   position: fixed;
@@ -1053,7 +1085,7 @@ html[data-chapter="dark"] .masthead {
   display: grid;
   align-content: end;
   padding: var(--s-64) var(--gutter) calc(var(--s-64) + env(safe-area-inset-bottom, 0px));
-  background: var(--stone);
+  background: var(--bg);
   transition: opacity var(--t-slow) var(--ease), visibility var(--t-slow);
 }
 
@@ -1062,7 +1094,8 @@ html[data-chapter="dark"] .masthead {
   visibility: hidden;
 }
 
-.no-js .boot {
+.no-js .boot,
+html[data-boot="warm"] .boot {
   display: none;
 }
 
@@ -1079,31 +1112,33 @@ html[data-chapter="dark"] .masthead {
   font-size: var(--size-xs);
   font-weight: 500;
   line-height: 1.45;
-  color: var(--ink-mid);
+  color: var(--fg-mid);
 }
 
 .boot__track {
   width: 100%;
   height: 1px;
   overflow: hidden;
-  background: var(--line-on-light);
+  background: var(--line);
 }
 
 .boot__bar {
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--ink);
+  background: var(--fg);
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform var(--t-base) var(--ease);
 }
 
 /* --------------------------------------------------------------------------
-   9. Stage: one fixed WebGL canvas owns every section background.
-      The canvas paints stone above the top edge of #work and petrol below
-      it, so the DOM stays transparent and the architecture reads through.
-      Its two walls are fitted to the canyon column on every resize.
+   9. Stage: one fixed WebGL canvas owns the page background. It paints the
+      page's chapter ground (stone on light pages, petrol on dark ones) under
+      the formation named by <body data-page>, so the DOM stays transparent
+      and the architecture reads through. Its two walls are fitted to the
+      canyon column on every resize, and it fades in over the identical
+      <html> ground once its first frame is drawn.
       A WebGL canvas is already its own compositor layer: strict
       containment keeps it from ever taking part in page layout or paint.
    -------------------------------------------------------------------------- */
@@ -1115,10 +1150,12 @@ html[data-chapter="dark"] .masthead {
   height: 100%;
   pointer-events: none;
   contain: strict;
+  transition: opacity var(--t-slow) var(--ease);
 }
 
 html:not([data-webgl="on"]) .stage {
   visibility: hidden;
+  opacity: 0;
 }
 
 html[data-webgl="off"] .stage,
@@ -1151,12 +1188,6 @@ html[data-webgl="off"] .stage-fallback,
 main {
   position: relative;
   z-index: 10;
-}
-
-/* Without the canvas, the dark chapter paints its own ground */
-html:not([data-webgl="on"]) #work,
-html:not([data-webgl="on"]) #contact {
-  background: var(--petrol);
 }
 
 /* --------------------------------------------------------------------------
@@ -1234,12 +1265,7 @@ html:not([data-webgl="on"]) #contact {
   padding-bottom: var(--s-96);
 }
 
-#about {
-  border-top: 1px solid var(--line-on-light);
-}
-
 #work {
-  border-top: 1px solid var(--line-on-dark);
   isolation: isolate;
 }
 
@@ -1313,7 +1339,24 @@ html[data-booted="true"] .boot-in:nth-child(4) {
 }
 
 /* --------------------------------------------------------------------------
-   13. Reduced motion
+   13. Page transitions: every page shares this stylesheet, so same-origin
+       navigations cross-fade natively where the browser supports it and
+       load as plain pages everywhere else. Off under reduced motion.
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--t-base);
+  animation-timing-function: var(--ease);
+}
+
+/* --------------------------------------------------------------------------
+   14. Reduced motion
    -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -1337,7 +1380,7 @@ html[data-booted="true"] .boot-in:nth-child(4) {
 }
 
 /* --------------------------------------------------------------------------
-   14. Print
+   15. Print
    -------------------------------------------------------------------------- */
 @media print {
   .masthead,
@@ -1357,7 +1400,7 @@ html[data-booted="true"] .boot-in:nth-child(4) {
     color: #000 !important;
   }
 
-  .section {
+  main > .section {
     padding-top: var(--s-32);
     padding-bottom: var(--s-32);
   }

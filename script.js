@@ -1,14 +1,17 @@
 /* ==========================================================================
    jomontolalu.com
-   One fixed WebGL stage: the kinetic data monolith.
+   One script for every page, and one fixed WebGL stage on each: the
+   kinetic data monolith.
 
    Two walls of matte, stacked blocks line a canyon. The copy sits on the
    empty floor between them: the canyon is fitted to the text column on
    every resize, so the architecture frames the content instead of sitting
    behind it.
 
-   Scroll        the walls travel toward the horizon at a parallax rate;
-                 every page section owns a stretch of the canyon
+   Page          each HTML file names itself on <body data-page>. That key
+                 picks the chapter (stone or petrol ground) and the formation
+                 the walls are built in, before the first frame is drawn
+   Scroll        the walls travel toward the horizon at a parallax rate
    Pointer       a raycast onto the crest of the walls drives a topographic
                  well: blocks under the cursor sink, a ring around them rises
    Click / tap   a sea green pulse runs outward through the glass slats
@@ -77,6 +80,42 @@
   }
 
   /* ------------------------------------------------------------------------
+     Pages: the one key every module reads. <body data-page> names the page.
+     Its chapter is also written into that file's <html data-chapter> and
+     theme-color, so the first paint is right before this script runs:
+     keep the two in step.
+
+     Formations are in height modules. The two columns on the canyon edge
+     form a clean cliff; rise and noise build the mass behind it. Every `bay`
+     rows the wall opens and a glass slat stands in the gap.
+     ------------------------------------------------------------------------ */
+  var PAGES = {
+    home: {
+      chapter: 'light',   /* the monolith */
+      formation: { base: 10, rise: 1, noise: 8, bay: 6, depth: 0.9 }
+    },
+    about: {
+      chapter: 'light',   /* terraces */
+      formation: { base: 6, rise: 2, noise: 0, bay: 8, depth: 0.9 }
+    },
+    capabilities: {
+      chapter: 'light',   /* four-block bays */
+      formation: { base: 6, rise: 1, noise: 0, bay: 5, depth: 0.9, zig: 2 }
+    },
+    work: {
+      chapter: 'dark',    /* data slats */
+      formation: { base: 4, rise: 1, noise: 0, bay: 4, depth: 0.42, wave: 8 }
+    },
+    contact: {
+      chapter: 'dark',    /* the monolith settles */
+      formation: { base: 3, rise: 1, noise: 3, bay: 9, depth: 0.9 }
+    }
+  };
+
+  var page = PAGES[document.body.getAttribute('data-page')] || PAGES.home;
+  var dark = page.chapter === 'dark';
+
+  /* ------------------------------------------------------------------------
      Frame-batched scroll and resize subscribers
      ------------------------------------------------------------------------ */
   var scrollSubs = [];
@@ -121,34 +160,56 @@
   }
 
   /* ------------------------------------------------------------------------
-     Boot overlay: waits for fonts and the first rendered frame
+     Boot overlay: waits for fonts and the first rendered frame, once per
+     visit. Every later page opens warm (the inline script in each <head>
+     reads BOOT_KEY): no overlay, the copy enters straight away and the
+     stage fades in when its first frame is ready.
      ------------------------------------------------------------------------ */
+  var BOOT_KEY = 'jm:booted';
+
   var boot = (function () {
     var el = document.getElementById('boot');
     var bar = document.getElementById('bootBar');
     var label = document.getElementById('bootLabel');
+    var warm = root.getAttribute('data-boot') === 'warm';
     var total = 2;
     var done = 0;
     var finished = false;
+    var booted = false;
+    var queue = [];
 
     /* The bar scales instead of resizing: compositor only, no layout */
     function paint() {
       if (bar) bar.style.transform = 'scaleX(' + (done / total) + ')';
     }
 
+    function release() {
+      booted = true;
+      if (el) el.setAttribute('data-done', 'true');
+      root.setAttribute('data-booted', 'true');
+      while (queue.length) queue.shift()();
+    }
+
     function finish() {
       if (finished) return;
       finished = true;
+      try { window.sessionStorage.setItem(BOOT_KEY, '1'); } catch (err) { /* storage blocked: every page boots cold */ }
+      if (warm) {
+        /* Let the entrance styles paint once, so the copy still eases in */
+        raf(function () { raf(release); });
+        return;
+      }
       if (bar) bar.style.transform = 'scaleX(1)';
       if (label) label.textContent = 'Ready';
-      window.setTimeout(function () {
-        if (el) el.setAttribute('data-done', 'true');
-        root.setAttribute('data-booted', 'true');
-      }, reduced ? 0 : 180);
+      window.setTimeout(release, reduced ? 0 : 180);
     }
 
-    window.setTimeout(finish, 2600);
-    paint();
+    if (warm) {
+      finish();
+    } else {
+      window.setTimeout(finish, 2600);
+      paint();
+    }
 
     return {
       step: function () {
@@ -156,7 +217,11 @@
         paint();
         if (done >= total) finish();
       },
-      finish: finish
+      /* Runs fn once the overlay has lifted (at once if it already has) */
+      ready: function (fn) {
+        if (booted) fn();
+        else queue.push(fn);
+      }
     };
   })();
 
@@ -167,14 +232,18 @@
   }
 
   /* ------------------------------------------------------------------------
-     Chrome: menu, active section, chapter and scrolled state
+     Chrome: chapter, menu and scrolled state. The current page is marked
+     with aria-current="page" in each HTML file, so it needs no script.
      ------------------------------------------------------------------------ */
   (function chrome() {
     var masthead = document.getElementById('masthead');
     var toggle = document.getElementById('menuToggle');
     var menu = document.getElementById('menu');
     var themeMeta = document.getElementById('themeColor');
-    var navLinks = Array.prototype.slice.call(document.querySelectorAll('[data-nav]'));
+
+    /* Normally a no-op: the HTML already carries the page's chapter */
+    root.setAttribute('data-chapter', page.chapter);
+    if (themeMeta) themeMeta.setAttribute('content', dark ? '#0B1618' : '#E5E6E1');
 
     if (!masthead || !toggle || !menu) return;
 
@@ -214,56 +283,24 @@
       if (!narrow) setMenu(false);
     });
 
-    var sections = navLinks
-      .map(function (a) { return document.getElementById(a.getAttribute('data-nav')); })
-      .filter(Boolean);
+    var scrolled = null;
 
-    if ('IntersectionObserver' in window && sections.length) {
-      var seen = {};
-      var current = null;
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) { seen[entry.target.id] = entry.intersectionRatio; });
-        var bestId = null;
-        var bestRatio = 0;
-        var ids = Object.keys(seen);
-        var i;
-        for (i = 0; i < ids.length; i++) {
-          if (seen[ids[i]] > bestRatio) { bestRatio = seen[ids[i]]; bestId = ids[i]; }
-        }
-        if (bestId === current) return;
-        current = bestId;
-        for (i = 0; i < navLinks.length; i++) {
-          if (bestId && navLinks[i].getAttribute('data-nav') === bestId) {
-            navLinks[i].setAttribute('aria-current', 'location');
-          } else {
-            navLinks[i].removeAttribute('aria-current');
-          }
-        }
-      }, { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5, 1] });
-      sections.forEach(function (s) { io.observe(s); });
+    function readScroll(y) {
+      var next = y > 24;
+      if (next === scrolled) return;
+      scrolled = next;
+      masthead.setAttribute('data-scrolled', next ? 'true' : 'false');
     }
 
-    var lastChapter = null;
-    window.__setChapter = function (dark) {
-      var next = dark ? 'dark' : 'light';
-      if (lastChapter === next) return;
-      lastChapter = next;
-      root.setAttribute('data-chapter', next);
-      if (themeMeta) themeMeta.setAttribute('content', dark ? '#0B1618' : '#E5E6E1');
-    };
-
-    var lastScrolled = null;
-    window.__setScrolled = function (v) {
-      if (v === lastScrolled) return;
-      lastScrolled = v;
-      masthead.setAttribute('data-scrolled', v ? 'true' : 'false');
-    };
+    readScroll(scrollY());
+    onScrollFrame(readScroll);
   })();
 
   /* ------------------------------------------------------------------------
-     Reveal on scroll
+     Reveal on scroll. Starts once the boot overlay lifts, so the first
+     screen of every page enters in view rather than behind the overlay.
      ------------------------------------------------------------------------ */
-  (function reveal() {
+  boot.ready(function reveal() {
     var items = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
     if (!items.length) return;
 
@@ -281,7 +318,7 @@
     }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
 
     items.forEach(function (el) { io.observe(el); });
-  })();
+  });
 
   /* ------------------------------------------------------------------------
      Copy email control
@@ -347,49 +384,6 @@
       });
     });
   })();
-
-  /* ------------------------------------------------------------------------
-     Director: section geometry in document space, and the chapter state.
-     The stage turns section tops into stretches of the canyon.
-     ------------------------------------------------------------------------ */
-  var SECTION_IDS = ['hero', 'about', 'capabilities', 'work', 'contact'];
-
-  var metrics = {
-    sectionTops: [0, 1, 2, 3, 4],
-    workTopDoc: 0,
-    mastheadH: 72
-  };
-
-  function measure() {
-    var y = scrollY();
-
-    function top(id) {
-      var el = document.getElementById(id);
-      return el ? el.getBoundingClientRect().top + y : 0;
-    }
-
-    var tops = [];
-    for (var i = 0; i < SECTION_IDS.length; i++) {
-      tops.push(i ? Math.max(top(SECTION_IDS[i]), tops[i - 1] + 1) : 0);
-    }
-
-    metrics.sectionTops = tops;
-    metrics.workTopDoc = top('work');
-
-    var masthead = document.getElementById('masthead');
-    metrics.mastheadH = masthead ? masthead.offsetHeight : 72;
-  }
-
-  function readScroll(y) {
-    var workTop = metrics.workTopDoc - y;
-    if (window.__setChapter) window.__setChapter(workTop <= metrics.mastheadH);
-    if (window.__setScrolled) window.__setScrolled(y > 24);
-  }
-
-  measure();
-  readScroll(scrollY());
-  onResizeFrame(measure);
-  onScrollFrame(readScroll);
 
   /* ------------------------------------------------------------------------
      Stage
@@ -497,17 +491,9 @@
       var RIPPLE_KICK = 1.2 * MODULE;
       var MAX_RIPPLES = 4;
 
-      /* One stretch of canyon per page section, in section order.
-         Heights are in modules. The two columns on the canyon edge form a
-         clean cliff; rise and noise build the mass behind it. Every `bay`
-         rows the wall opens and a glass slat stands in the gap. */
-      var PROFILES = [
-        { base: 10, rise: 1, noise: 8, bay: 6, depth: 0.9 },            /* hero: the monolith */
-        { base: 6, rise: 2, noise: 0, bay: 8, depth: 0.9 },             /* about: terraces */
-        { base: 6, rise: 1, noise: 0, bay: 5, depth: 0.9, zig: 2 },     /* capabilities: four-block bays */
-        { base: 4, rise: 1, noise: 0, bay: 4, depth: 0.42, wave: 8 },   /* work: data slats */
-        { base: 3, rise: 1, noise: 3, bay: 9, depth: 0.9 }              /* contact: the monolith settles */
-      ];
+      /* The whole canyon is built in this page's formation (see PAGES), from
+         the very first frame: nothing about it depends on scroll depth. */
+      var FORMATION = page.formation;
       var CLIFF = 2;
 
       var maxDpr = coarse ? 1.5 : 2;
@@ -521,7 +507,7 @@
 
       renderer.setPixelRatio(pixelRatio());
       renderer.setSize(window.innerWidth, window.innerHeight, false);
-      renderer.setClearColor(new THREE.Color(PALETTE.stone), 1);
+      renderer.setClearColor(new THREE.Color(dark ? PALETTE.petrol : PALETTE.stone), 1);
       renderer.toneMapping = THREE.NeutralToneMapping;
       renderer.toneMappingExposure = 1;
       renderer.shadowMap.enabled = true;
@@ -539,7 +525,7 @@
       }
 
       var uniforms = {
-        uSplit: { value: -2 },
+        uDark: { value: dark ? 1 : 0 },
         uJoint: { value: JOINT },
         uStone: { value: new THREE.Color(PALETTE.stone) },
         uPetrol: { value: new THREE.Color(PALETTE.petrol) },
@@ -554,41 +540,31 @@
       var sea = uniforms.uPulseFilter.value;
       sea.multiplyScalar(1 / Math.max(sea.r, sea.g, sea.b));
 
-      /* Chapter split shared by every surface: pixels below the top edge of
-         #work use the dark palette. Measured in NDC so the reduced-size
-         transmission buffer splits in exactly the same place. */
-      var SPLIT_GLSL = [
-        'uniform float uSplit;',
-        'float darkMask(float ndcY){',
-        '  return clamp((uSplit - ndcY) / max(fwidth(ndcY), 1e-5) + 0.5, 0.0, 1.0);',
-        '}'
-      ].join('\n');
-
-      /* ---- Backdrop: stone above the split, petrol below; unlit, exact ---- */
+      /* ---- Backdrop: the page's chapter ground; unlit, exact ----------------
+         Drawn as a mesh rather than left to the clear colour, so the glass
+         refracts the same ground in the transmission pass. uDark is fixed
+         per page: 0 on stone, 1 on petrol. */
       var backdrop = new THREE.Mesh(
         new THREE.PlaneGeometry(2, 2),
         new THREE.ShaderMaterial({
           uniforms: {
-            uSplit: uniforms.uSplit,
+            uDark: uniforms.uDark,
             uStone: uniforms.uStone,
             uPetrol: uniforms.uPetrol
           },
           depthTest: false,
           depthWrite: false,
           vertexShader: [
-            'varying float vNdcY;',
             'void main(){',
-            '  vNdcY = position.y;',
             '  gl_Position = vec4(position.xy, 0.0, 1.0);',
             '}'
           ].join('\n'),
           fragmentShader: [
+            'uniform float uDark;',
             'uniform vec3 uStone;',
             'uniform vec3 uPetrol;',
-            'varying float vNdcY;',
-            SPLIT_GLSL,
             'void main(){',
-            '  gl_FragColor = vec4(mix(uStone, uPetrol, darkMask(vNdcY)), 1.0);',
+            '  gl_FragColor = vec4(mix(uStone, uPetrol, uDark), 1.0);',
             '  #include <colorspace_fragment>',
             '}'
           ].join('\n')
@@ -653,7 +629,7 @@
          so a block that sinks loses modules into the floor. */
       var matteMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.94, metalness: 0 });
       matteMat.onBeforeCompile = function (shader) {
-        shader.uniforms.uSplit = uniforms.uSplit;
+        shader.uniforms.uDark = uniforms.uDark;
         shader.uniforms.uJoint = uniforms.uJoint;
         shader.uniforms.uAlbedo = uniforms.uAlbedo;
         shader.uniforms.uAlbedoDark = uniforms.uAlbedoDark;
@@ -664,7 +640,6 @@
           'varying vec3 vBlock;',
           'varying vec3 vBlockSize;',
           'varying vec3 vBlockNormal;',
-          'varying vec4 vClip;',
           ''
         ].join('\n') + shader.vertexShader
           .replace('#include <begin_vertex>', [
@@ -672,13 +647,10 @@
             'vBlockSize = vec3(instanceMatrix[0][0], instanceMatrix[1][1], instanceMatrix[2][2]);',
             'vBlock = position * vBlockSize;',
             'vBlockNormal = normal;'
-          ].join('\n'))
-          .replace('#include <project_vertex>', [
-            '#include <project_vertex>',
-            'vClip = gl_Position;'
           ].join('\n'));
 
         shader.fragmentShader = [
+          'uniform float uDark;',
           'uniform float uJoint;',
           'uniform vec3 uAlbedo;',
           'uniform vec3 uAlbedoDark;',
@@ -687,13 +659,10 @@
           'varying vec3 vBlock;',
           'varying vec3 vBlockSize;',
           'varying vec3 vBlockNormal;',
-          'varying vec4 vClip;',
-          SPLIT_GLSL,
           ''
         ].join('\n') + shader.fragmentShader
           .replace('#include <color_fragment>', [
             '#include <color_fragment>',
-            'float dm = darkMask(vClip.y / vClip.w);',
             'vec3 an = abs(vBlockNormal);',
             'vec3 rim = vec3(',
             '  0.5 * vBlockSize.x - abs(vBlock.x),',
@@ -707,13 +676,13 @@
             'gy = min(gy, uJoint - gy) + an.y * 1e3;',
             'float lineG = 1.0 - smoothstep(0.0, max(fwidth(drop) * 1.1, 1e-4), gy);',
             'float line = max(lineE * 0.8, lineG * 0.45);',
-            'vec3 albedo = mix(uAlbedo, uAlbedoDark, dm);',
-            'vec3 ink = mix(albedo * 0.6, uLineDark, dm);',
+            'vec3 albedo = mix(uAlbedo, uAlbedoDark, uDark);',
+            'vec3 ink = mix(albedo * 0.6, uLineDark, uDark);',
             'diffuseColor.rgb = mix(albedo, ink, line);'
           ].join('\n'))
           .replace('#include <lights_fragment_end>', [
             '#include <lights_fragment_end>',
-            'reflectedLight.indirectDiffuse *= mix(1.0, uAmbientDark, dm);'
+            'reflectedLight.indirectDiffuse *= mix(1.0, uAmbientDark, uDark);'
           ].join('\n'));
       };
 
@@ -738,29 +707,23 @@
          is pure emission; on stone, where added light would wash out to white,
          the slat also filters what it transmits toward the same hue. */
       glassMat.onBeforeCompile = function (shader) {
-        shader.uniforms.uSplit = uniforms.uSplit;
+        shader.uniforms.uDark = uniforms.uDark;
         shader.uniforms.uPulse = uniforms.uPulse;
         shader.uniforms.uPulseFilter = uniforms.uPulseFilter;
         shader.vertexShader = [
           'attribute float aPulse;',
           'varying float vPulse;',
-          'varying vec4 vClip;',
           ''
         ].join('\n') + shader.vertexShader
           .replace('#include <begin_vertex>', [
             '#include <begin_vertex>',
             'vPulse = aPulse;'
-          ].join('\n'))
-          .replace('#include <project_vertex>', [
-            '#include <project_vertex>',
-            'vClip = gl_Position;'
           ].join('\n'));
         shader.fragmentShader = [
+          'uniform float uDark;',
           'uniform vec3 uPulse;',
           'uniform vec3 uPulseFilter;',
           'varying float vPulse;',
-          'varying vec4 vClip;',
-          SPLIT_GLSL,
           ''
         ].join('\n') + shader.fragmentShader
           .replace('#include <emissivemap_fragment>', [
@@ -769,8 +732,7 @@
           ].join('\n'))
           .replace('#include <transmission_fragment>', [
             '#include <transmission_fragment>',
-            'float lightSide = 1.0 - darkMask(vClip.y / vClip.w);',
-            'totalDiffuse *= mix(vec3(1.0), uPulseFilter, vPulse * lightSide);'
+            'totalDiffuse *= mix(vec3(1.0), uPulseFilter, vPulse * (1.0 - uDark));'
           ].join('\n'));
       };
 
@@ -836,7 +798,6 @@
       var rows = 60;
       var cols = 10;
       var travelPerPx = 0.01;
-      var edges = [];            /* region boundaries, as global row numbers */
       var dirty = true;
 
       var raycaster = new THREE.Raycaster();
@@ -867,9 +828,10 @@
         camera.updateMatrixWorld();
       }
 
-      /* Right edge of the copy column plus a margin, in NDC */
+      /* Right edge of the copy column plus a margin, in NDC. Every page sets
+         its copy in the same canyon container, so the first one will do. */
       function columnEdge() {
-        var ref = document.querySelector('#hero .container');
+        var ref = document.querySelector('main .container');
         var half = view.w / 2;
         var edge = 0.62;
         if (ref) {
@@ -878,27 +840,6 @@
           edge = (half - (rect.left + pad) + MARGIN_PX) / half;
         }
         return clamp(edge, 0.2, narrowQuery.matches ? NARROW_EDGE : 0.96);
-      }
-
-      function regions() {
-        /* A section's stretch begins where the canyon floor at mid screen sits
-           when that section's top edge crosses mid screen. Profiles are only
-           re-resolved when a boundary actually moved. */
-        for (var i = 1; i < metrics.sectionTops.length; i++) {
-          var s = travelPerPx * (metrics.sectionTops[i] - view.h / 2);
-          var g = Math.round((s - zFar) / CELL);
-          if (edges[i - 1] !== g) {
-            edges[i - 1] = g;
-            dirty = true;
-          }
-        }
-        edges.length = metrics.sectionTops.length - 1;
-      }
-
-      function regionOf(g) {
-        var n = 0;
-        while (n < edges.length && g >= edges[n]) n++;
-        return n;
       }
 
       var corner = new THREE.Vector3();
@@ -994,7 +935,6 @@
         matte.count = live;
         glass.count = live;
 
-        regions();
         fitShadow();
         dirty = true;
         renderer.shadowMap.needsUpdate = true;
@@ -1002,7 +942,7 @@
 
       /* ---- Profiles ------------------------------------------------------------- */
       function profileAt(g, side, c, i) {
-        var P = PROFILES[regionOf(g)];
+        var P = FORMATION;
         var bay = wrap(g, P.bay);
         var mass = Math.max(0, c - CLIFF + 1);
         var m = P.base + P.rise * mass;
@@ -1186,11 +1126,6 @@
         }
         if (blocksBusy) busy = true;
 
-        /* Chapter split: read live scroll, not the damped value, so the
-           ground under the DOM always matches the section above it. */
-        var workTop = metrics.workTopDoc - scrollY();
-        uniforms.uSplit.value = 1 - 2 * workTop / view.cssH;
-
         renderer.render(scene, camera);
         return busy;
       }
@@ -1241,15 +1176,13 @@
 
       /* ---- Events -------------------------------------------------------------------- */
       /* The body observer also lands here when only the document reflows
-         (fonts, content): then the frame is untouched and only the section
-         stretches are re-measured. Buffers are rebuilt for real viewport changes. */
+         (fonts, content): the formation does not depend on the document, so
+         the frame is untouched. Buffers are rebuilt for real viewport changes. */
       onResizeFrame(function () {
         view.cssH = canvas.clientHeight || window.innerHeight;
         if (viewportChanged()) {
           layout();
           snapNext = true;
-        } else {
-          regions();
         }
         play();
       });
