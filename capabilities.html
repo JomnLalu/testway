@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Capabilities | Jonathan Montolalu</title>
-  <meta name="description" content="Language model fine-tuning, Python systems, data science and hardware electronics: the work Jonathan Immanuel Montolalu takes on as an independent AI and data science engineer in Indonesia.">
+  <meta name="description" content="How Jonathan Immanuel Montolalu approaches language model fine-tuning, Python systems, data science and hardware electronics, written as working methods.">
   <link rel="canonical" href="https://jomontolalu.com/capabilities.html">
   <meta name="author" content="Jonathan Immanuel Montolalu">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -15,7 +15,7 @@
   <meta property="og:site_name" content="Jonathan Montolalu">
   <meta property="og:locale" content="en_US">
   <meta property="og:title" content="Capabilities - Jonathan Montolalu">
-  <meta property="og:description" content="Language model fine-tuning, Python systems, data science and hardware electronics.">
+  <meta property="og:description" content="Language model fine-tuning, Python systems, data science and hardware electronics, each written as a method: what comes first, what decides the result, and where it goes wrong.">
   <meta property="og:url" content="https://jomontolalu.com/capabilities.html">
   <meta property="og:image" content="https://jomontolalu.com/assets/og-image.png">
   <meta property="og:image:type" content="image/png">
@@ -25,7 +25,7 @@
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Capabilities - Jonathan Montolalu">
-  <meta name="twitter:description" content="Language model fine-tuning, Python systems, data science and hardware electronics.">
+  <meta name="twitter:description" content="Language model fine-tuning, Python systems, data science and hardware electronics, each written as a method.">
   <meta name="twitter:image" content="https://jomontolalu.com/assets/og-image.png">
   <meta name="twitter:image:alt" content="Jonathan Montolalu - AI and data science engineer">
 
@@ -57,6 +57,10 @@
       try {
         if (window.sessionStorage.getItem('jm:booted')) root.setAttribute('data-boot', 'warm');
       } catch (err) { /* storage blocked: boot normally */ }
+      /* If the script never boots (blocked, failed, too old), show the static page */
+      window.setTimeout(function () {
+        if (!root.hasAttribute('data-booted')) root.classList.add('no-js');
+      }, 8000);
     })(document.documentElement);
   </script>
 
@@ -69,7 +73,7 @@
         "@id": "https://jomontolalu.com/capabilities.html#webpage",
         "url": "https://jomontolalu.com/capabilities.html",
         "name": "Capabilities | Jonathan Montolalu",
-        "description": "Language model fine-tuning, Python systems, data science and hardware electronics: the work Jonathan Immanuel Montolalu takes on as an independent AI and data science engineer in Indonesia.",
+        "description": "How Jonathan Immanuel Montolalu approaches language model fine-tuning, Python systems, data science and hardware electronics, written as working methods.",
         "inLanguage": "en",
         "dateModified": "2026-10-05",
         "isPartOf": { "@id": "https://jomontolalu.com/#website" },
@@ -103,6 +107,11 @@
         <span>Jonathan Montolalu</span>
       </a>
 
+      <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="menu">
+        <span>Menu</span>
+        <span class="menu-toggle__bars" aria-hidden="true"><i></i><i></i></span>
+      </button>
+
       <nav class="nav" id="menu" aria-label="Primary">
         <ul class="nav__list" role="list">
           <li><a href="about.html">About</a></li>
@@ -112,64 +121,239 @@
         </ul>
       </nav>
 
-      <a class="btn btn--ghost masthead__cta" href="mailto:hello@jomontolalu.com">Email Me</a>
-
-      <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="menu">
-        <span>Menu</span>
-        <span class="menu-toggle__bars" aria-hidden="true"><i></i><i></i></span>
-      </button>
+      <a class="btn btn--ghost masthead__cta" href="mailto:hello@jomontolalu.com">Email me</a>
     </div>
   </header>
 
   <main id="main" tabindex="-1">
 
-    <section class="section scene-light" id="capabilities" aria-labelledby="capabilities-title">
-      <div class="scrim scrim--capabilities" aria-hidden="true"></div>
+    <article class="section scene-light" id="capabilities" aria-labelledby="capabilities-title">
+      <div class="scrim" aria-hidden="true"></div>
       <div class="container">
-        <div class="grid">
-          <div class="col-full section-head" data-reveal>
-            <h1 class="t-h2" id="capabilities-title">What I can take on</h1>
-          </div>
 
-          <div class="col-cap" data-reveal>
-            <article class="cap">
-              <h2 class="t-h3 cap__title">Language model fine-tuning</h2>
-              <p class="cap__body">
-                Adapting open models to low-resource languages and narrow domains: assembling the
-                dataset, running the training, then checking the output holds up against real speakers.
-              </p>
-            </article>
+        <header class="page-head flow">
+          <p class="t-kicker boot-in">Capabilities</p>
+          <h1 class="t-display boot-in" id="capabilities-title">What I can take on</h1>
+          <p class="t-lead boot-in">
+            Four kinds of work, each written as a method: what I settle first, what decides the
+            result, and where that kind of project usually goes wrong.
+          </p>
+        </header>
+
+        <section class="chapter" id="fine-tuning" aria-labelledby="fine-tuning-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">01</p>
+            <h2 class="t-h2" id="fine-tuning-title">Language model fine-tuning</h2>
+            <p class="t-lead t-quiet">
+              Adapting open models to low-resource languages and narrow domains: assembling the
+              dataset, running the training, then checking the output holds up against real speakers.
+            </p>
+          </header>
+          <div class="prose flow">
+            <p>
+              The model is rarely the difficult part. The difficult parts are a dataset that teaches
+              the right behaviour and a training setup that fits the hardware actually available. The
+              method follows that order.
+            </p>
+            <ol class="steps" role="list">
+              <li class="steps__item">
+                <div>
+                  <p class="steps__title">Fix the task before the data</p>
+                  <p class="steps__body">
+                    A classifier and a translator need different data, different evaluation and a
+                    different interface. I write the exact input and output down first, because
+                    changing the task later means changing the dataset. MangARTI changed task once,
+                    from classifier to translator, and needed an entirely different kind of data
+                    afterwards.
+                  </p>
+                </div>
+              </li>
+              <li class="steps__item">
+                <div>
+                  <p class="steps__title">Produce data where none exists</p>
+                  <p class="steps__body">
+                    For a near-zero resource language there is nothing to download. A strong general
+                    model drafts source sentences at volume and native speakers write the target side.
+                    Every example is stored as an instruction, an input and an output in Alpaca-format
+                    JSONL, one example per line.
+                  </p>
+                </div>
+              </li>
+              <li class="steps__item">
+                <div>
+                  <p class="steps__title">Fit the method to the GPU</p>
+                  <p class="steps__body">
+                    On consumer hardware, VRAM decides the method. QLoRA freezes the base model in
+                    4-bit precision and trains only small low-rank adapters, which is what lets an 8B
+                    model train on a laptop GPU; gradient checkpointing and an 8-bit optimiser cut
+                    memory use further.
+                  </p>
+                </div>
+              </li>
+              <li class="steps__item">
+                <div>
+                  <p class="steps__title">Judge the output against speakers, not the loss curve</p>
+                  <p class="steps__body">
+                    A falling loss shows that a model fits its data, not that a speaker would accept
+                    its translations. Output is checked against how people actually write and talk; a
+                    model that scores well and sounds wrong has failed.
+                  </p>
+                </div>
+              </li>
+              <li class="steps__item">
+                <div>
+                  <p class="steps__title">Repair the data before the hyperparameters</p>
+                  <p class="steps__body">
+                    On a small dataset, hallucinations usually trace back to inconsistent or incorrect
+                    examples. Revising data by hand is slower than launching another training run, and
+                    it is the change that actually moves quality.
+                  </p>
+                </div>
+              </li>
+            </ol>
+            <p>
+              Then I document where the model stops working: MangARTI's model card says plainly that
+              it translates single sentences and degrades on paragraphs.
+            </p>
           </div>
-          <div class="col-cap" data-reveal>
-            <article class="cap">
-              <h2 class="t-h3 cap__title">Python systems</h2>
-              <p class="cap__body">
-                The architecture that turns a model or a data source into a product; request flow,
-                scheduling, storage, and the unglamorous parts that have to keep working after launch.
-              </p>
-            </article>
+        </section>
+
+        <section class="chapter" id="python-systems" aria-labelledby="python-systems-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">02</p>
+            <h2 class="t-h2" id="python-systems-title">Python systems</h2>
+            <p class="t-lead t-quiet">
+              The architecture that turns a model or a data source into a product: request flow,
+              scheduling, storage, and the unglamorous parts that have to keep working after launch.
+            </p>
+          </header>
+          <div class="prose flow">
+            <h3 class="t-h3">Start from the contract</h3>
+            <p>
+              Before any code, I settle what goes in, what comes out and what happens when the input
+              is wrong. MangARTI's demo application shows the pattern at small scale. It loads the
+              4-bit model and its adapter once, builds the Alpaca prompt from the chosen translation
+              direction, rejects empty input before it reaches the GPU, and exposes only the controls
+              a tester needs: output length, sampling, temperature and top-p.
+            </p>
+
+            <h3 class="t-h3">Request flow</h3>
+            <p>
+              Validate early, do expensive work once, and keep each step small enough to test on its
+              own. A request that is going to fail should fail at the cheapest point in the pipeline,
+              not after a model has already spent GPU time on it.
+            </p>
+
+            <h3 class="t-h3">Working with time</h3>
+            <p>
+              Not every system here is Python, but the same rules apply. BSQShuttle, a single
+              JavaScript page, compares the device clock with each route's departures every minute to
+              mark the last bus and the next one. The logic stays simple because the data is shaped
+              around the one question its users ask: when does the next bus leave?
+            </p>
+
+            <h3 class="t-h3">Storage in the shape it is read</h3>
+            <p>
+              Training data lives in JSONL because each line is one complete example that can be
+              read, corrected and reviewed by hand, which is exactly how MangARTI's dataset was
+              repaired. A timetable lives as a list of departures per route, because that is how
+              it is displayed.
+            </p>
+
+            <h3 class="t-h3">After launch</h3>
+            <p>
+              A tool people depend on has to say when it might be wrong. MangARTI's model card lists
+              what it should not be used for. BSQShuttle shows the operator's caveats beside the
+              schedule, including that a full bus may leave before its scheduled time.
+            </p>
+
+            <h3 class="t-h3">When Python is not needed</h3>
+            <p>
+              Python is the default when a model or a data pipeline is involved. When neither is,
+              BSQShuttle and IterMath show the alternative: static pages with no backend, and no
+              application server to maintain.
+            </p>
           </div>
-          <div class="col-cap" data-reveal>
-            <article class="cap">
-              <h2 class="t-h3 cap__title">Data science</h2>
-              <p class="cap__body">
-                Getting messy, real-world data into a shape a model can learn from and a person can
-                read: collection, cleaning, and the analysis that decides what to build next.
-              </p>
-            </article>
+        </section>
+
+        <section class="chapter" id="data-science" aria-labelledby="data-science-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">03</p>
+            <h2 class="t-h2" id="data-science-title">Data science</h2>
+            <p class="t-lead t-quiet">
+              Getting messy, real-world data into a shape a model can learn from and a person can
+              read: collection, cleaning, and the analysis that decides what to build next.
+            </p>
+          </header>
+          <div class="prose flow">
+            <h3 class="t-h3">Collect what does not exist yet</h3>
+            <p>
+              MangARTI's data had to be produced, not cleaned: source sentences drafted, translated
+              by native speakers, then revised by hand. Collection became a project of its own, with
+              volunteers to coordinate and quality to check.
+            </p>
+
+            <h3 class="t-h3">Treat variation as information</h3>
+            <p>
+              Manado Malay (Manadonese) has no standardised spelling, and the same word appears as
+              <span lang="xmm">Ngana</span>, <span lang="xmm">Ngna</span> or <span lang="xmm">ngn</span>.
+              Whether to normalise those forms or teach a model to accept all of them changes how it
+              reads real messages, which makes it a modelling decision rather than a cleaning chore.
+            </p>
+
+            <h3 class="t-h3">Let the analysis decide the product</h3>
+            <p>
+              MangARTI's first model was a Naive Bayes classifier. The most consequential analysis on
+              that project was not a metric: it was a peer's question about who would use a
+              classifier, and the answer turned the work into a translator.
+            </p>
+
+            <h3 class="t-h3">Know the distribution you ship</h3>
+            <p>
+              Measuring the finished dataset explains a model's limits before its users find them.
+              MangARTI's published training file holds 3,454 sentence pairs, each written in both
+              directions, with source sentences averaging under nine words. That is why the model is
+              documented as a sentence-level translator.
+            </p>
           </div>
-          <div class="col-cap" data-reveal>
-            <article class="cap">
-              <h2 class="t-h3 cap__title">Hardware electronics</h2>
-              <p class="cap__body">
-                Work that crosses the software–hardware line, where constraints are physical and the
-                margin for a bad assumption is much smaller.
-              </p>
-            </article>
+        </section>
+
+        <section class="chapter" id="hardware" aria-labelledby="hardware-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">04</p>
+            <h2 class="t-h2" id="hardware-title">Hardware electronics</h2>
+            <p class="t-lead t-quiet">
+              Work that crosses the software–hardware line, where constraints are physical and the
+              margin for a bad assumption is much smaller.
+            </p>
+          </header>
+          <div class="prose flow">
+            <p>
+              The discipline is the one the software work uses, applied with less room for error:
+              read the specification before relying on it, measure instead of assuming, and change one
+              variable at a time.
+            </p>
+            <p>
+              The same habit runs through the machine learning work: MangARTI's training was planned
+              around the memory of one laptop GPU, and MangARTI mini is being sized for the devices
+              its users already own.
+            </p>
+          </div>
+        </section>
+
+        <div class="closing flow" data-reveal>
+          <p class="t-lead">
+            If a project needs one of these, or the space between two of them, a short description
+            of the problem and the data behind it is the best place to start.
+          </p>
+          <div class="actions">
+            <a class="btn btn--solid" href="mailto:hello@jomontolalu.com">Email hello@jomontolalu.com</a>
+            <a class="btn btn--ghost" href="work.html">Read the case studies</a>
           </div>
         </div>
+
       </div>
-    </section>
+    </article>
 
   </main>
 
@@ -182,6 +366,6 @@
   </footer>
 
   <!-- Bump ?v= on every release: a stale cached assets/script.js with this page shows only the fallback -->
-  <script src="assets/script.js?v=2026-10-05" defer></script>
+  <script src="assets/script.js?v=2026-10-05" defer onerror="document.documentElement.classList.add('no-js')"></script>
 </body>
 </html>

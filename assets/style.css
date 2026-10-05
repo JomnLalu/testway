@@ -64,13 +64,14 @@
   /* Top of an inner page: the section rhythm, but never closer than 48px
      under the fixed masthead (phones, notches) */
   --page-top: max(var(--section-y), calc(var(--masthead-h) + var(--s-48) + env(safe-area-inset-top, 0px)));
+  /* Between the major blocks of a long page: page head, chapters, closing */
+  --block-gap: var(--s-64);
   --container: 1240px;
   /* The copy column: the empty floor between the two walls of the stage.
      The stage measures this column and fits the canyon to it. */
   --canyon: var(--container);
 
   /* Hit areas and icons (multiples of 4) */
-  --tap-sm: 40px;
   --tap-md: 44px;
   --tap-lg: 48px;
   --icon-sm: 16px;
@@ -154,6 +155,7 @@ html[data-chapter="dark"] {
   :root {
     --gutter: var(--s-32);
     --section-y: var(--s-160);
+    --block-gap: var(--s-96);
   }
 }
 
@@ -324,11 +326,6 @@ strong {
   text-wrap: pretty;
 }
 
-.t-body {
-  max-width: var(--measure);
-  text-wrap: pretty;
-}
-
 .t-kicker {
   max-width: 54ch;
   font-family: var(--font-display);
@@ -352,10 +349,45 @@ strong {
   --flow-space: var(--s-32);
 }
 
-.flow > .actions,
-.flow > .facts,
-.flow > .channels {
+.flow > .actions {
   --flow-space: var(--s-48);
+}
+
+/* A kicker that labels a chapter sits tight against its heading */
+.chapter__head > .t-kicker + * {
+  --flow-space: var(--s-12);
+}
+
+/* A chapter's links (buttons or the split control) sit one step closer
+   than the hero's, since a chapter head is a smaller unit than a page */
+.chapter__head > .actions,
+.chapter__head > .split {
+  --flow-space: var(--s-32);
+}
+
+/* Long-form text. Lists and figures sit 32px from the text around them.
+   Subsection headings come last so they always win: 64px above, 16px
+   below, so each one reads as the start of what follows it. */
+.prose > .steps,
+.prose > .facts,
+.prose > .variants,
+.prose > .steps + *,
+.prose > .facts + *,
+.prose > .variants + * {
+  --flow-space: var(--s-32);
+}
+
+.prose > .t-h3 {
+  --flow-space: var(--s-64);
+}
+
+.prose > .t-h3 + * {
+  --flow-space: var(--s-16);
+}
+
+.prose > p {
+  max-width: var(--measure);
+  text-wrap: pretty;
 }
 
 /* --------------------------------------------------------------------------
@@ -402,44 +434,40 @@ main .container {
   padding-bottom: var(--section-y);
 }
 
-.section-head {
-  margin-bottom: var(--s-24);
-}
-
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-12);
 }
 
-.col-full,
-.col-head,
-.col-body,
-.col-cap {
+.col-full {
   grid-column: 1 / -1;
 }
 
-@media (min-width: 768px) {
-  .col-cap {
-    grid-column: span 6;
-  }
+/* Inner pages read top to bottom in one column: a page head, then
+   chapters divided by hairlines, then a closing block. Every gap between
+   them is the same --block-gap, so long pages keep one rhythm. */
+.chapter {
+  margin-top: var(--block-gap);
+  padding-top: var(--s-48);
+  border-top: 1px solid var(--line);
 }
 
-@media (min-width: 900px) {
-  .section-head {
-    margin-bottom: var(--s-48);
-  }
+/* Content under a chapter heading (a bare h2, or a head block with kicker,
+   lead and links) always starts one 32px step below it */
+.chapter__head + *,
+.chapter > .t-h2 + * {
+  margin-top: var(--s-32);
 }
 
-/* Once the canyon is wide enough, About splits into heading and body */
-@media (min-width: 1200px) {
-  .col-head {
-    grid-column: 1 / span 5;
-  }
+.toc {
+  margin-top: var(--s-48);
+}
 
-  .col-body {
-    grid-column: 6 / span 7;
-  }
+.closing {
+  margin-top: var(--block-gap);
+  padding-top: var(--s-48);
+  border-top: 1px solid var(--line);
 }
 
 /* --------------------------------------------------------------------------
@@ -493,7 +521,7 @@ main .container {
   --btn-line: var(--fg);
 }
 
-.btn[disabled] {
+.btn[aria-disabled="true"] {
   cursor: default;
   opacity: .72;
 }
@@ -534,6 +562,16 @@ main .container {
   color: var(--fg-mid);
 }
 
+/* In a page head the status line floats under the buttons, so an empty
+   live region never adds height to the head and the --block-gap holds */
+.page-head {
+  position: relative;
+}
+
+.page-head > .status {
+  position: absolute;
+}
+
 /* Facts list */
 .facts {
   border-top: 1px solid var(--line);
@@ -558,131 +596,108 @@ main .container {
 
 .facts__val {
   line-height: 1.6;
-}
-
-/* Capability cards: panels on the canyon floor */
-.cap {
-  height: 100%;
-  padding: var(--s-32);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--glass);
-}
-
-.cap__title {
-  margin-bottom: var(--s-16);
-}
-
-.cap__body {
-  max-width: 42ch;
-  line-height: 1.7;
-  color: var(--fg-mid);
   text-wrap: pretty;
 }
 
-/* Work list. A card with one destination is a link: its title, stretched
-   over the whole card, so the link is named by the title alone. MangARTI
-   has two destinations, so its footer becomes the split control below. */
-.work-list {
+/* Inline text links: always underlined, so a link never rests on colour */
+.link {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--line);
+  text-underline-offset: .18em;
+  transition: color var(--t-fast) var(--ease), text-decoration-color var(--t-fast) var(--ease);
+}
+
+.link:hover {
+  color: var(--signal);
+  text-decoration-color: currentColor;
+}
+
+/* Identifiers (model names, settings) set in the display face: one
+   typographic system, no third font for code */
+code {
+  padding: 0 var(--s-4);
+  border-radius: var(--radius);
+  background: var(--lift);
+  font-family: var(--font-display);
+  font-size: var(--size-sm);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+/* Icon inside a button: same 16px glyph as the split control */
+.btn__icon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex: none;
+}
+
+/* Steps: an ordered method or pipeline. Hairline rows like the facts list,
+   numbered in a fixed column so the text edges line up. */
+.steps {
+  counter-reset: step;
   border-top: 1px solid var(--line);
 }
 
-.work-item {
+.steps__item {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: var(--s-32) minmax(0, 1fr);
+  column-gap: var(--s-12);
+  padding-top: var(--s-24);
+  padding-bottom: var(--s-24);
   border-bottom: 1px solid var(--line);
 }
 
-.work-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  column-gap: var(--s-24);
-  padding: var(--s-32) var(--s-16);
-  margin-left: calc(var(--s-16) * -1);
-  margin-right: calc(var(--s-16) * -1);
-  border-radius: var(--radius);
-  transition: background-color var(--t-base) var(--ease);
+.steps__item::before {
+  content: counter(step, decimal-leading-zero);
+  font-family: var(--font-display);
+  font-size: var(--size-xs);
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--fg-mid);
+  font-variant-numeric: tabular-nums;
 }
 
-.work-card--split {
-  grid-template-columns: minmax(0, 1fr);
+.steps__title {
+  font-family: var(--font-display);
+  font-size: var(--size-sm);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.005em;
 }
 
-.work-link {
-  text-decoration: none;
-}
-
-.work-link::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius);
-}
-
-.work-link:focus-visible {
-  outline: none;
-}
-
-.work-link:focus-visible::after {
-  outline: 2px solid var(--signal);
-  outline-offset: -2px;
-}
-
-.work-item__name {
-  transition: color var(--t-base) var(--ease);
-}
-
-.work-item__body {
-  max-width: 54ch;
-  margin-top: var(--s-12);
-  line-height: 1.7;
+.steps__body {
+  max-width: var(--measure);
+  margin-top: var(--s-8);
   color: var(--fg-mid);
   text-wrap: pretty;
 }
 
-.work-item__foot {
+/* Variants: words shown as specimens, one bordered token each */
+.variants__list {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-4) var(--s-24);
-  margin-top: var(--s-24);
-  font-family: var(--font-display);
-  font-size: var(--size-xs);
-  line-height: 1.45;
-  color: var(--fg-mid);
+  gap: var(--s-12);
 }
 
-.work-item__foot b {
-  font-weight: 500;
-  color: var(--fg);
-}
-
-.work-item__icon {
-  display: grid;
-  place-items: center;
-  width: var(--tap-sm);
-  height: var(--tap-sm);
-  flex: none;
+.variants__list li {
+  padding: var(--s-8) var(--s-16);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  font-family: var(--font-display);
+  font-size: var(--size-h3);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.018em;
+}
+
+.variants__caption {
+  margin-top: var(--s-12);
+  font-family: var(--font-display);
+  font-size: var(--size-xs);
+  line-height: 1.6;
   color: var(--fg-mid);
-  transition:
-    color var(--t-base) var(--ease),
-    border-color var(--t-base) var(--ease),
-    transform var(--t-base) var(--ease);
-}
-
-.work-card--link:hover {
-  background: var(--lift);
-}
-
-.work-card--link:hover .work-item__name {
-  color: var(--signal);
-}
-
-.work-card--link:hover .work-item__icon {
-  color: var(--signal);
-  border-color: var(--signal);
-  transform: translate(2px, -2px);
 }
 
 /* Split control: one bar, two links.
@@ -699,7 +714,6 @@ main .container {
   grid-template-columns: 1fr 1fr;
   width: 100%;
   max-width: var(--split-w);
-  margin-top: var(--s-24);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--glass);
@@ -721,7 +735,7 @@ main .container {
   line-height: 1.2;
   letter-spacing: -0.005em;
   text-decoration: none;
-  white-space: nowrap;
+  text-align: center;
   transition: color var(--t-heavy) var(--ease-heavy);
 }
 
@@ -817,16 +831,22 @@ main .container {
   }
 }
 
-/* Contact channels */
-.channels {
+/* Two lists stacked in one block are separate groups, not one long list */
+.rows + .facts {
+  margin-top: var(--s-48);
+}
+
+/* Rows: a list of destinations (contents, channels, capabilities). Each row
+   is one link: a name on the left, a quiet description on the right. */
+.rows {
   border-top: 1px solid var(--line);
 }
 
-.channel {
+.row {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-16);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-4);
   padding-top: var(--s-16);
   padding-bottom: var(--s-16);
   border-bottom: 1px solid var(--line);
@@ -834,22 +854,21 @@ main .container {
   transition: color var(--t-fast) var(--ease);
 }
 
-.channel:hover {
+.row:hover {
   color: var(--signal);
 }
 
-.channel__name {
+.row__name {
   font-family: var(--font-display);
   font-size: var(--size-sm);
   font-weight: 500;
   line-height: 1.45;
 }
 
-.channel__handle {
+.row__meta {
   font-size: var(--size-sm);
   line-height: 1.45;
   color: var(--fg-mid);
-  text-align: right;
 }
 
 /* --------------------------------------------------------------------------
@@ -998,16 +1017,19 @@ html[data-chapter="dark"] .masthead {
     visibility: hidden;
     opacity: 0;
     transform: translateY(-4px);
+    /* Closing hides the links only after the fade; opening shows them at
+       once, so a keyboard user's next Tab always lands inside the menu */
     transition:
       opacity var(--t-base) var(--ease),
       transform var(--t-base) var(--ease),
-      visibility var(--t-base);
+      visibility 0s linear var(--t-base);
   }
 
   .masthead[data-open="true"] .nav {
     visibility: visible;
     opacity: 1;
     transform: none;
+    transition-delay: 0s;
   }
 
   .nav__list {
@@ -1192,10 +1214,12 @@ main {
 
 /* --------------------------------------------------------------------------
    10. Section scrims. On phones the walls rise behind the edges of the
-       copy, so the scrim is a full-width veil: top, middle (at 32%) and
-       end opacity per section. From 900px it is a band down the canyon
-       only: it steadies the long shadows under the text and leaves the
-       walls on the periphery untouched.
+       copy, so the scrim is a full-width veil: top, middle and end opacity
+       per page. The middle stop sits at 32% of the section, but never
+       further down than 480px, so long reading pages reach full cover
+       right under their page head. From 900px it is a band down the
+       canyon only: it steadies the long shadows under the text and leaves
+       the walls on the periphery untouched.
    -------------------------------------------------------------------------- */
 .scrim {
   --veil: var(--stone-rgb);
@@ -1209,7 +1233,7 @@ main {
   pointer-events: none;
   background: linear-gradient(180deg,
     rgb(var(--veil) / var(--veil-top)) 0%,
-    rgb(var(--veil) / var(--veil-mid)) 32%,
+    rgb(var(--veil) / var(--veil-mid)) min(32%, 480px),
     rgb(var(--veil) / var(--veil-end)) 100%);
 }
 
@@ -1222,23 +1246,13 @@ main {
   --band: .6;
 }
 
-.scrim--capabilities {
-  --veil-top: .48;
-  --veil-mid: .48;
-  --veil-end: .48;
-}
-
-.scrim--work {
+/* The dark chapter: a heavier veil, since chalk text on petrol walls needs
+   more separation than ink on stone */
+.scrim--work,
+.scrim--contact {
   --veil-top: .64;
   --veil-mid: .84;
   --veil-end: .84;
-  --band: .8;
-}
-
-.scrim--contact {
-  --veil-top: .92;
-  --veil-mid: .84;
-  --veil-end: .48;
   --band: .8;
 }
 
@@ -1265,35 +1279,43 @@ main {
   padding-bottom: var(--s-96);
 }
 
-#work {
-  isolation: isolate;
+/* The hero's line lengths are set so its call to action clears the fold
+   on 900px-tall screens: the headline runs to 18ch (five lines at
+   1440px, not six) and the kicker takes the full column */
+#hero .t-display {
+  max-width: 18ch;
 }
 
-#contact {
-  min-height: 92vh;
-  min-height: 92svh;
-  display: grid;
-  align-content: center;
+#hero .t-kicker:first-child {
+  max-width: none;
+}
+
+/* Each page section keeps its scrim inside its own stacking context */
+main > .section {
   isolation: isolate;
 }
 
 @media (min-width: 900px) {
-  #about {
-    min-height: 100vh;
-    min-height: 100svh;
-  }
-
   .facts__row {
     grid-template-columns: var(--facts-key-col) 1fr;
     gap: var(--s-24);
     align-items: baseline;
   }
 
-  .work-card {
-    padding-left: var(--s-24);
-    padding-right: var(--s-24);
-    margin-left: calc(var(--s-24) * -1);
-    margin-right: calc(var(--s-24) * -1);
+  .steps__item {
+    grid-template-columns: var(--s-48) minmax(0, 1fr);
+    column-gap: var(--s-16);
+  }
+
+  .row {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-16);
+  }
+
+  .row__meta {
+    text-align: right;
   }
 }
 
@@ -1336,6 +1358,10 @@ html[data-booted="true"] .boot-in:nth-child(3) {
 
 html[data-booted="true"] .boot-in:nth-child(4) {
   transition-delay: 240ms;
+}
+
+html[data-booted="true"] .boot-in:nth-child(5) {
+  transition-delay: 320ms;
 }
 
 /* --------------------------------------------------------------------------
@@ -1383,13 +1409,22 @@ html[data-booted="true"] .boot-in:nth-child(4) {
    15. Print
    -------------------------------------------------------------------------- */
 @media print {
+  /* Paper is static: nothing transitions or animates */
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
   .masthead,
   .stage,
   .stage-fallback,
   .boot,
   .skip,
   .scrim,
-  .work-item__icon,
+  .btn__icon,
+  .split__icon,
   .split__link--model::before {
     display: none !important;
   }
@@ -1400,13 +1435,29 @@ html[data-booted="true"] .boot-in:nth-child(4) {
     color: #000 !important;
   }
 
+  /* Paper is always light: every chapter prints with the light roles */
+  html[data-chapter],
+  .scene-dark {
+    --fg: var(--ink);
+    --fg-mid: var(--ink-mid);
+    --line: var(--line-on-light);
+    --lift: var(--lift-on-light);
+    --glass: transparent;
+    --signal: var(--sea-deep);
+    --on-signal: var(--stone);
+  }
+
+  .btn--solid {
+    --btn-bg: transparent;
+    --btn-fg: var(--fg);
+    --btn-line: var(--fg);
+  }
+
   main > .section {
     padding-top: var(--s-32);
     padding-bottom: var(--s-32);
   }
 
-  #work,
-  #contact,
   .site-footer {
     background: #fff !important;
     color: #000 !important;
@@ -1423,8 +1474,9 @@ html[data-booted="true"] .boot-in:nth-child(4) {
     border: 0;
   }
 
-  .work-link::after,
-  .split__link::after {
+  /* Outbound links print their address; the split control's hairline is
+     the same pseudo-element, so its screen styling is reset here */
+  main a[href^="http"]::after {
     content: " (" attr(href) ")";
     position: static;
     width: auto;

@@ -187,6 +187,9 @@
       booted = true;
       if (el) el.setAttribute('data-done', 'true');
       root.setAttribute('data-booted', 'true');
+      /* The head script falls back to no-js if this file is slow or fails;
+         a late boot takes the page back */
+      root.classList.remove('no-js');
       while (queue.length) queue.shift()();
     }
 
@@ -315,7 +318,9 @@
         entry.target.classList.add('is-in');
         io.unobserve(entry.target);
       });
-    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
+    /* Threshold 0: a chapter much taller than the screen (the MangARTI case
+       study) can never show 8% of itself at once, so any ratio would strand it */
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0 });
 
     items.forEach(function (el) { io.observe(el); });
   });
@@ -332,9 +337,10 @@
     var address = btn.getAttribute('data-copy');
     var resetTimer = null;
 
+    /* aria-disabled, not disabled: a disabled button loses keyboard focus */
     function setState(state, label, message) {
       btn.setAttribute('data-state', state);
-      btn.disabled = (state === 'working');
+      btn.setAttribute('aria-disabled', state === 'working' ? 'true' : 'false');
       labelEl.textContent = label;
       if (status) status.textContent = message || '';
     }
@@ -360,6 +366,7 @@
     }
 
     btn.addEventListener('click', function () {
+      if (btn.getAttribute('aria-disabled') === 'true') return;
       window.clearTimeout(resetTimer);
       setState('working', 'Copying', '');
       var started = Date.now();

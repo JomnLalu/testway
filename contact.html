@@ -57,6 +57,10 @@
       try {
         if (window.sessionStorage.getItem('jm:booted')) root.setAttribute('data-boot', 'warm');
       } catch (err) { /* storage blocked: boot normally */ }
+      /* If the script never boots (blocked, failed, too old), show the static page */
+      window.setTimeout(function () {
+        if (!root.hasAttribute('data-booted')) root.classList.add('no-js');
+      }, 8000);
     })(document.documentElement);
   </script>
 
@@ -104,6 +108,11 @@
         <span>Jonathan Montolalu</span>
       </a>
 
+      <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="menu">
+        <span>Menu</span>
+        <span class="menu-toggle__bars" aria-hidden="true"><i></i><i></i></span>
+      </button>
+
       <nav class="nav" id="menu" aria-label="Primary">
         <ul class="nav__list" role="list">
           <li><a href="about.html">About</a></li>
@@ -113,12 +122,7 @@
         </ul>
       </nav>
 
-      <a class="btn btn--ghost masthead__cta" href="mailto:hello@jomontolalu.com">Email Me</a>
-
-      <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="menu">
-        <span>Menu</span>
-        <span class="menu-toggle__bars" aria-hidden="true"><i></i><i></i></span>
-      </button>
+      <a class="btn btn--ghost masthead__cta" href="mailto:hello@jomontolalu.com">Email me</a>
     </div>
   </header>
 
@@ -127,42 +131,122 @@
     <section class="section scene-dark" id="contact" aria-labelledby="contact-title">
       <div class="scrim scrim--contact" aria-hidden="true"></div>
       <div class="container">
-        <div class="grid">
-          <div class="col-full flow" data-reveal>
-            <h1 class="t-h2" id="contact-title">Let's Connect!</h1>
-            <p class="t-lead t-quiet">
-              Have a cool project that aligns with my interests, or just have something to say?
-              Email is the fastest way to reach me.
-            </p>
 
-            <div class="actions">
-              <a class="btn btn--solid" href="mailto:hello@jomontolalu.com">Email hello@jomontolalu.com</a>
-              <button class="btn btn--ghost" id="copyEmail" type="button" data-state="idle" data-copy="hello@jomontolalu.com">
-                <span class="btn__spinner" aria-hidden="true"></span>
-                <span class="btn__label">Copy email address</span>
-              </button>
-            </div>
-            <p class="status" id="copyStatus" role="status" aria-live="polite"></p>
+        <header class="page-head flow">
+          <p class="t-kicker boot-in">Contact</p>
+          <h1 class="t-display boot-in" id="contact-title">Start with an email</h1>
+          <p class="t-lead boot-in">
+            Have a project that fits the work on this site, or something to say about it? Email is
+            the fastest way to reach me.
+          </p>
+          <div class="actions boot-in">
+            <a class="btn btn--solid" href="mailto:hello@jomontolalu.com">Email hello@jomontolalu.com</a>
+            <button class="btn btn--ghost" id="copyEmail" type="button" data-state="idle" data-copy="hello@jomontolalu.com">
+              <span class="btn__spinner" aria-hidden="true"></span>
+              <span class="btn__label">Copy email address</span>
+            </button>
+          </div>
+          <p class="status" id="copyStatus" role="status" aria-live="polite"></p>
+        </header>
 
-            <div class="channels">
-              <a class="channel" href="https://github.com/JomnLalu" target="_blank" rel="noopener noreferrer">
-                <span class="channel__name">GitHub</span>
-                <span class="channel__handle">JomnLalu</span>
+        <section class="chapter" aria-labelledby="brief-title" data-reveal>
+          <h2 class="t-h2" id="brief-title">What a useful first message covers</h2>
+          <ol class="steps" role="list">
+            <li class="steps__item">
+              <div>
+                <p class="steps__title">The problem</p>
+                <p class="steps__body">
+                  Who has it, and what they do today without a solution.
+                </p>
+              </div>
+            </li>
+            <li class="steps__item">
+              <div>
+                <p class="steps__title">The data</p>
+                <p class="steps__body">
+                  What already exists, where it lives, and roughly how much of it there is. For a
+                  language project, whether native speakers are involved.
+                </p>
+              </div>
+            </li>
+            <li class="steps__item">
+              <div>
+                <p class="steps__title">A working result</p>
+                <p class="steps__body">
+                  What someone should be able to do when the project is finished, and on what device.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section class="chapter" aria-labelledby="take-on-title" data-reveal>
+          <h2 class="t-h2" id="take-on-title">What I take on</h2>
+          <ul class="rows" role="list">
+            <li>
+              <a class="row" href="capabilities.html#fine-tuning">
+                <span class="row__name">Language model fine-tuning</span>
+                <span class="row__meta">Low-resource languages, narrow domains</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="capabilities.html#python-systems">
+                <span class="row__name">Python systems</span>
+                <span class="row__meta">The software around a model or a data source</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="capabilities.html#data-science">
+                <span class="row__name">Data science</span>
+                <span class="row__meta">Collection, cleaning, analysis</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="capabilities.html#hardware">
+                <span class="row__name">Hardware electronics</span>
+                <span class="row__meta">Work across the software–hardware line</span>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="chapter" aria-labelledby="elsewhere-title" data-reveal>
+          <h2 class="t-h2" id="elsewhere-title">Elsewhere</h2>
+          <ul class="rows" role="list">
+            <li>
+              <a class="row" href="https://github.com/JomnLalu" target="_blank" rel="noopener noreferrer">
+                <span class="row__name">GitHub</span>
+                <span class="row__meta">JomnLalu</span>
                 <span class="sr-only">Opens GitHub in a new tab</span>
               </a>
-              <a class="channel" href="https://huggingface.co/Jmnlalu" target="_blank" rel="noopener noreferrer">
-                <span class="channel__name">Hugging Face</span>
-                <span class="channel__handle">Jmnlalu</span>
+            </li>
+            <li>
+              <a class="row" href="https://huggingface.co/Jmnlalu" target="_blank" rel="noopener noreferrer">
+                <span class="row__name">Hugging Face</span>
+                <span class="row__meta">Jmnlalu</span>
                 <span class="sr-only">Opens Hugging Face in a new tab</span>
               </a>
-              <a class="channel" href="https://www.linkedin.com/in/jonathan-immanuel-montolalu-11b43a407" target="_blank" rel="noopener noreferrer">
-                <span class="channel__name">LinkedIn</span>
-                <span class="channel__handle">Jonathan Immanuel Montolalu</span>
+            </li>
+            <li>
+              <a class="row" href="https://www.linkedin.com/in/jonathan-immanuel-montolalu-11b43a407" target="_blank" rel="noopener noreferrer">
+                <span class="row__name">LinkedIn</span>
+                <span class="row__meta">Jonathan Immanuel Montolalu</span>
                 <span class="sr-only">Opens LinkedIn in a new tab</span>
               </a>
+            </li>
+          </ul>
+          <dl class="facts">
+            <div class="facts__row">
+              <dt class="facts__key">Based in</dt>
+              <dd class="facts__val">Indonesia</dd>
             </div>
-          </div>
-        </div>
+            <div class="facts__row">
+              <dt class="facts__key">Languages</dt>
+              <dd class="facts__val">English, Indonesian</dd>
+            </div>
+          </dl>
+        </section>
+
       </div>
     </section>
 
@@ -177,6 +261,6 @@
   </footer>
 
   <!-- Bump ?v= on every release: a stale cached assets/script.js with this page shows only the fallback -->
-  <script src="assets/script.js?v=2026-10-05" defer></script>
+  <script src="assets/script.js?v=2026-10-05" defer onerror="document.documentElement.classList.add('no-js')"></script>
 </body>
 </html>

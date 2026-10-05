@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Work | Jonathan Montolalu</title>
-  <meta name="description" content="Selected work by Jonathan Immanuel Montolalu: MangARTI, a Manadonese translation model; IterMath, a math practice app; BSQShuttle, a Binus Square shuttle tracker; and Rex Mundi Coding Club.">
+  <meta name="description" content="Case studies: MangARTI, a QLoRA fine-tune of Llama 3 8B for Manado Malay trained on one laptop GPU; IterMath; BSQShuttle; and Rex Mundi Coding Club.">
   <link rel="canonical" href="https://jomontolalu.com/work.html">
   <meta name="author" content="Jonathan Immanuel Montolalu">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -15,7 +15,7 @@
   <meta property="og:site_name" content="Jonathan Montolalu">
   <meta property="og:locale" content="en_US">
   <meta property="og:title" content="Work - Jonathan Montolalu">
-  <meta property="og:description" content="MangARTI, IterMath, BSQShuttle and Rex Mundi Coding Club: a Manadonese translation model, a math drilling app, a live shuttle tracker for Binus Square, and a student coding club.">
+  <meta property="og:description" content="How MangARTI went from a school classifier to a Manadonese translator trained on one laptop GPU, plus notes on IterMath and BSQShuttle.">
   <meta property="og:url" content="https://jomontolalu.com/work.html">
   <meta property="og:image" content="https://jomontolalu.com/assets/og-image.png">
   <meta property="og:image:type" content="image/png">
@@ -25,7 +25,7 @@
 
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Work - Jonathan Montolalu">
-  <meta name="twitter:description" content="Selected work: MangARTI, IterMath, BSQShuttle and Rex Mundi Coding Club.">
+  <meta name="twitter:description" content="Case studies: MangARTI, IterMath, BSQShuttle and Rex Mundi Coding Club.">
   <meta name="twitter:image" content="https://jomontolalu.com/assets/og-image.png">
   <meta name="twitter:image:alt" content="Jonathan Montolalu - AI and data science engineer">
 
@@ -57,6 +57,10 @@
       try {
         if (window.sessionStorage.getItem('jm:booted')) root.setAttribute('data-boot', 'warm');
       } catch (err) { /* storage blocked: boot normally */ }
+      /* If the script never boots (blocked, failed, too old), show the static page */
+      window.setTimeout(function () {
+        if (!root.hasAttribute('data-booted')) root.classList.add('no-js');
+      }, 8000);
     })(document.documentElement);
   </script>
 
@@ -69,7 +73,7 @@
         "@id": "https://jomontolalu.com/work.html#webpage",
         "url": "https://jomontolalu.com/work.html",
         "name": "Work | Jonathan Montolalu",
-        "description": "Selected work by Jonathan Immanuel Montolalu: MangARTI, a Manadonese translation model; IterMath, a math practice app; BSQShuttle, a Binus Square shuttle tracker; and Rex Mundi Coding Club.",
+        "description": "Case studies: MangARTI, a QLoRA fine-tune of Llama 3 8B for Manado Malay trained on one laptop GPU; IterMath; BSQShuttle; and Rex Mundi Coding Club.",
         "inLanguage": "en",
         "dateModified": "2026-10-05",
         "isPartOf": { "@id": "https://jomontolalu.com/#website" },
@@ -91,10 +95,22 @@
           "https://huggingface.co/Jmnlalu/MangARTI",
           "https://github.com/JomnLalu/MangARTI"
         ],
-        "description": "A fine-tuned large language model that translates formal Bahasa Indonesia into the Manadonese dialect.",
-        "inLanguage": "id",
+        "description": "A QLoRA fine-tune of Llama 3 8B Instruct that translates between formal Bahasa Indonesia and Manado Malay in both directions, trained on a dataset written with native speakers.",
+        "programmingLanguage": "Python",
+        "inLanguage": ["id", "xmm"],
+        "isBasedOn": { "@id": "https://jomontolalu.com/work.html#mangarti-dataset" },
         "author": { "@id": "https://jomontolalu.com/#person" },
         "isPartOf": { "@id": "https://jomontolalu.com/work.html#webpage" }
+      },
+      {
+        "@type": "Dataset",
+        "@id": "https://jomontolalu.com/work.html#mangarti-dataset",
+        "name": "Bahasa-Manado-Alpaca-Translations",
+        "url": "https://huggingface.co/datasets/Jmnlalu/Bahasa-Manado-Alpaca-Translations",
+        "description": "Paired sentences in formal Bahasa Indonesia and Manado Malay, written in both translation directions as Alpaca-format instruction examples in JSONL.",
+        "inLanguage": ["id", "xmm"],
+        "encodingFormat": "application/jsonl",
+        "creator": { "@id": "https://jomontolalu.com/#person" }
       },
       {
         "@type": "SoftwareApplication",
@@ -103,7 +119,7 @@
         "url": "https://itermath.jomontolalu.com",
         "applicationCategory": "EducationalApplication",
         "operatingSystem": "Web browser",
-        "description": "A simple web app that builds fluency in core math concepts through repeated practice.",
+        "description": "A practice tool for core math skills: seven modules from addition to permutations, each generating new problems and showing the solution after every wrong answer.",
         "author": { "@id": "https://jomontolalu.com/#person" },
         "isPartOf": { "@id": "https://jomontolalu.com/work.html#webpage" }
       },
@@ -114,7 +130,7 @@
         "url": "https://bsqshuttle.jomontolalu.com",
         "applicationCategory": "TravelApplication",
         "operatingSystem": "Web browser",
-        "description": "An unofficial schedule tracker for the Binus Square shuttle bus, giving students departure and arrival times across the Kemanggisan, Alam Sutera, and JWC/FX routes.",
+        "description": "An unofficial timetable for the Binus Square shuttle bus, showing departure and arrival times across the Kemanggisan, Alam Sutera and JWC/FX routes.",
         "author": { "@id": "https://jomontolalu.com/#person" },
         "isPartOf": { "@id": "https://jomontolalu.com/work.html#webpage" }
       },
@@ -155,6 +171,11 @@
         <span>Jonathan Montolalu</span>
       </a>
 
+      <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="menu">
+        <span>Menu</span>
+        <span class="menu-toggle__bars" aria-hidden="true"><i></i><i></i></span>
+      </button>
+
       <nav class="nav" id="menu" aria-label="Primary">
         <ul class="nav__list" role="list">
           <li><a href="about.html">About</a></li>
@@ -164,136 +185,462 @@
         </ul>
       </nav>
 
-      <a class="btn btn--ghost masthead__cta" href="mailto:hello@jomontolalu.com">Email Me</a>
-
-      <button class="menu-toggle" id="menuToggle" type="button" aria-expanded="false" aria-controls="menu">
-        <span>Menu</span>
-        <span class="menu-toggle__bars" aria-hidden="true"><i></i><i></i></span>
-      </button>
+      <a class="btn btn--ghost masthead__cta" href="mailto:hello@jomontolalu.com">Email me</a>
     </div>
   </header>
 
   <main id="main" tabindex="-1">
 
-    <section class="section scene-dark" id="work" aria-labelledby="work-title">
+    <div class="section scene-dark" id="work">
       <div class="scrim scrim--work" aria-hidden="true"></div>
       <div class="container">
-        <div class="grid">
-          <div class="col-full section-head flow" data-reveal>
-            <h1 class="t-h2" id="work-title">Selected work</h1>
+
+        <header class="page-head flow">
+          <p class="t-kicker boot-in">Work</p>
+          <h1 class="t-display boot-in">Selected work</h1>
+          <p class="t-lead boot-in">
+            Four projects, each in use by someone other than me. MangARTI is written up in full, from
+            its first classifier to the model in development now. IterMath and BSQShuttle get shorter
+            notes on what each tool does and why it is built the way it is.
+          </p>
+        </header>
+
+        <nav class="toc" aria-label="Projects on this page" data-reveal>
+          <ul class="rows" role="list">
+            <li>
+              <a class="row" href="#mangarti">
+                <span class="row__name">MangARTI</span>
+                <span class="row__meta">Language model</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="#itermath">
+                <span class="row__name">IterMath</span>
+                <span class="row__meta">Web application</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="#bsqshuttle">
+                <span class="row__name">BSQShuttle</span>
+                <span class="row__meta">Web application</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="#rex-mundi">
+                <span class="row__name">Rex Mundi Coding Club</span>
+                <span class="row__meta">Community</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+
+        <!-- MangARTI: the full case study -->
+        <article class="chapter" id="mangarti" aria-labelledby="mangarti-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">01 · Language model</p>
+            <h2 class="t-h2" id="mangarti-title">MangARTI</h2>
             <p class="t-lead t-quiet">
-              Four projects, each in use by someone other than me.
+              A fine-tuned Llama 3 8B that translates between formal Bahasa Indonesia and Manado Malay,
+              also called Manadonese, in both directions. It was trained on a dataset written with native speakers, on a single
+              laptop GPU.
+            </p>
+            <div class="split" role="group" aria-labelledby="mangarti-title">
+              <a class="split__link split__link--code" href="https://github.com/JomnLalu/MangARTI" target="_blank" rel="noopener noreferrer">
+                <span>View code</span>
+                <svg class="split__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+                  <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="sr-only">Opens MangARTI on GitHub in a new tab</span>
+              </a>
+              <a class="split__link split__link--model" href="https://huggingface.co/Jmnlalu/MangARTI" target="_blank" rel="noopener noreferrer">
+                <span>View model</span>
+                <svg class="split__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+                  <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="sr-only">Opens MangARTI on Hugging Face in a new tab</span>
+              </a>
+            </div>
+          </header>
+
+          <div class="prose flow">
+            <h3 class="t-h3">At a glance</h3>
+            <dl class="facts">
+              <div class="facts__row">
+                <dt class="facts__key">Task</dt>
+                <dd class="facts__val">Sentence translation, formal Indonesian to Manado Malay and back</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Base model</dt>
+                <dd class="facts__val"><code>Llama-3-8b-Instruct-bnb-4bit</code>, Llama 3 8B Instruct quantised to 4-bit</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Method</dt>
+                <dd class="facts__val">QLoRA, with Unsloth and PEFT</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Dataset</dt>
+                <dd class="facts__val">About 7,000 Alpaca-format examples in JSONL, <a class="link" href="https://huggingface.co/datasets/Jmnlalu/Bahasa-Manado-Alpaca-Translations" target="_blank" rel="noopener noreferrer">published on Hugging Face<span class="sr-only"> (opens in a new tab)</span></a></dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Hardware</dt>
+                <dd class="facts__val">One consumer gaming laptop with an NVIDIA RTX 5050</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Status</dt>
+                <dd class="facts__val">Published; a ~1B-parameter version in development</dd>
+              </div>
+            </dl>
+
+            <h3 class="t-h3">The catalyst</h3>
+            <p>
+              MangARTI started as a final school project, and it started small. The first version was
+              a Naive Bayes classifier that sorted text into two classes: Manadonese or formal Bahasa
+              Indonesia. For a language with almost no tooling it was a sensible first model, cheap to
+              train and easy to inspect.
+            </p>
+            <p>
+              A peer challenged it with a simple question: what would anyone do with the answer?
+              Speakers of Manadonese already know which language they are reading, and a label does
+              nothing for someone who understands only one side of the pair. The question was harder
+              to dismiss than any accuracy figure, so the project changed shape, from labelling the
+              dialect to translating it with a fine-tuned large language model.
+            </p>
+
+            <h3 class="t-h3">Why word-for-word translation was never an option</h3>
+            <p>
+              The obvious shortcut for a dialect this close to formal Indonesian is a lookup table:
+              map each Manadonese word to its formal equivalent and substitute. Manado Malay defeats
+              that approach twice.
+            </p>
+            <p>
+              First, it is a near-zero resource language. There is no large parallel corpus to learn
+              from, and very little Manadonese in the text that general-purpose models are trained on.
+              Second, it has no standardised orthography. People write it the way they speak it, so a
+              single word arrives in several spellings:
+            </p>
+            <figure class="variants">
+              <ul class="variants__list" role="list">
+                <li lang="xmm">Ngana</li>
+                <li lang="xmm">Ngna</li>
+                <li lang="xmm">ngn</li>
+              </ul>
+              <figcaption class="variants__caption">One word, “you”, in three spellings seen in everyday Manadonese writing.</figcaption>
+            </figure>
+            <p>
+              A dictionary keyed on spelling fails on the first variant it has not seen. A language
+              model can learn from context that these forms carry the same meaning, which is why the
+              project needed one.
+            </p>
+
+            <h3 class="t-h3">A human-in-the-loop data pipeline</h3>
+            <p>
+              With no corpus to download, the dataset had to be produced. The pipeline splits the work
+              by what each participant does best: a general model drafts at volume, and people supply
+              the judgement that cannot be automated.
+            </p>
+            <ol class="steps" role="list">
+              <li class="steps__item">
+                <div>
+                  <p class="steps__title">Draft the source sentences</p>
+                  <p class="steps__body">
+                    Gemini 3.2 Pro generated everyday sentences in formal Indonesian, giving the dataset
+                    breadth without asking volunteers to invent material.
+                  </p>
+                </div>
+              </li>
+              <li class="steps__item">
+                <div>
+                  <p class="steps__title">Translate with native speakers</p>
+                  <p class="steps__body">
+                    I coordinated a group of native-speaker volunteers who translated the sentences into
+                    Manadonese by hand, so the target side reflects how the dialect is actually used.
+                  </p>
+                </div>
+              </li>
+              <li class="steps__item">
+                <div>
+                  <p class="steps__title">Write every pair in both directions</p>
+                  <p class="steps__body">
+                    Each sentence pair becomes two training examples, formal to Manadonese and
+                    Manadonese to formal, so one model serves both directions.
+                  </p>
+                </div>
+              </li>
+              <li class="steps__item">
+                <div>
+                  <p class="steps__title">Format as Alpaca JSONL</p>
+                  <p class="steps__body">
+                    Every example carries an instruction, an input and an output, stored one per line
+                    in JSONL. The same Alpaca template is used in training and at inference, so the
+                    model is always asked in the format it learned.
+                  </p>
+                </div>
+              </li>
+            </ol>
+            <p>
+              The finished dataset holds about 7,000 examples and is published openly on Hugging Face
+              as <a class="link" href="https://huggingface.co/datasets/Jmnlalu/Bahasa-Manado-Alpaca-Translations" target="_blank" rel="noopener noreferrer">Bahasa-Manado-Alpaca-Translations<span class="sr-only"> (opens in a new tab)</span></a>.
+            </p>
+
+            <h3 class="t-h3">Training on one laptop GPU</h3>
+            <p>
+              All training ran locally on a consumer gaming laptop with an NVIDIA RTX 5050. Its VRAM
+              ruled out conventional fine-tuning of an 8-billion-parameter model, so the hardware chose
+              the method before any experiment did.
+            </p>
+            <p>
+              The base model is Llama 3 8B Instruct, loaded as a 4-bit bitsandbytes quantisation
+              (<code>Llama-3-8b-Instruct-bnb-4bit</code>). QLoRA leaves those quantised weights frozen
+              and trains small low-rank adapters on top of them, which brings the memory needed for
+              training within reach of a laptop card. Training runs through Unsloth and TRL's
+              supervised fine-tuning trainer, with gradient checkpointing and an 8-bit optimiser to
+              stretch the memory budget further. The published training script uses this
+              configuration:
+            </p>
+            <dl class="facts">
+              <div class="facts__row">
+                <dt class="facts__key">Adapter</dt>
+                <dd class="facts__val">LoRA rank 16, alpha 16, no dropout</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Target modules</dt>
+                <dd class="facts__val">Every attention and MLP projection: <code>q</code>, <code>k</code>, <code>v</code>, <code>o</code>, <code>gate</code>, <code>up</code>, <code>down</code></dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Sequence length</dt>
+                <dd class="facts__val">512 tokens</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Batch</dt>
+                <dd class="facts__val">Batch size 1 per device, 8 gradient accumulation steps (effective batch 8)</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Optimiser</dt>
+                <dd class="facts__val">8-bit AdamW, learning rate 1e-4, cosine schedule, 50 warm-up steps</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Epochs</dt>
+                <dd class="facts__val">2</dd>
+              </div>
+            </dl>
+
+            <h3 class="t-h3">Fixing hallucinations in the data, not the hyperparameters</h3>
+            <p>
+              Early versions hallucinated severely: translations that read fluently but did not say
+              what the source said.
+            </p>
+            <p>
+              The tempting response is to tune: lower the learning rate, train for longer, change the
+              adapter rank. That was not where the problem was. The fix was a rigorous, manual revision
+              of the dataset, example by example, until the data was clean enough to learn from.
+            </p>
+            <p>
+              On a dataset of about 7,000 examples, every bad example is a meaningful share of what the
+              model learns, and no hyperparameter compensates for it.
+            </p>
+
+            <h3 class="t-h3">Known limits</h3>
+            <p>
+              MangARTI is trained on single sentences, and it is documented that way: paragraphs and
+              long documents fall outside its training data and degrade the output. Casual Manadonese
+              typed in chat, with its shifting slang, abbreviations and non-standard spellings, remains
+              the hardest input, so the model card recommends entering one sentence at a time in
+              relatively standard spelling. It
+              is not meant for medical, legal or other high-stakes translation, and translations it
+              produces should be presented as AI-generated.
+            </p>
+
+            <h3 class="t-h3" id="mangarti-mini">Next: MangARTI mini</h3>
+            <p>
+              An 8B model, even quantised, still asks for a capable GPU every time it runs. MangARTI
+              mini replaces it with highly efficient models of around one billion parameters, and I am
+              experimenting with Qwen and Llama models at that size.
+            </p>
+            <p>
+              The goal is accessibility. A translator for a regional dialect is most useful when it
+              runs on the hardware its speakers already own, not only on a gaming laptop.
             </p>
           </div>
+        </article>
 
-          <div class="col-full" data-reveal>
-            <ul class="work-list" role="list">
+        <!-- IterMath -->
+        <article class="chapter" id="itermath" aria-labelledby="itermath-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">02 · Web application</p>
+            <h2 class="t-h2" id="itermath-title">IterMath</h2>
+            <p class="t-lead t-quiet">
+              A practice tool for core math skills: seven modules, from addition to permutations, each
+              generating new problems and showing the solution after every wrong answer.
+            </p>
+            <div class="actions">
+              <a class="btn btn--ghost" href="https://itermath.jomontolalu.com" target="_blank" rel="noopener noreferrer">
+                Open IterMath
+                <svg class="btn__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+                  <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="sr-only">(opens in a new tab)</span>
+              </a>
+            </div>
+          </header>
 
-              <!-- Two destinations, so the card is not a link: its footer splits into two -->
-              <li class="work-item">
-                <article class="work-card work-card--split">
-                  <h2 class="t-h3 work-item__name" id="work-mangarti">MangARTI</h2>
-                  <p class="work-item__body">
-                    A fine-tuned large language model that translates formal Bahasa Indonesia into the
-                    Manadonese dialect.
-                  </p>
-                  <p class="work-item__foot">
-                    <span><b>Language model</b></span>
-                    <span>Published on Hugging Face</span>
-                  </p>
-                  <div class="split" role="group" aria-labelledby="work-mangarti">
-                    <a class="split__link split__link--code" href="https://github.com/JomnLalu/MangARTI" target="_blank" rel="noopener noreferrer">
-                      <span>View Code</span>
-                      <svg class="split__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-                        <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      <span class="sr-only">Opens MangARTI on GitHub in a new tab</span>
-                    </a>
-                    <a class="split__link split__link--model" href="https://huggingface.co/Jmnlalu/MangARTI" target="_blank" rel="noopener noreferrer">
-                      <span>View Model</span>
-                      <svg class="split__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
-                        <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      <span class="sr-only">Opens MangARTI on Hugging Face in a new tab</span>
-                    </a>
-                  </div>
-                </article>
-              </li>
+          <div class="prose flow">
+            <dl class="facts">
+              <div class="facts__row">
+                <dt class="facts__key">Modules</dt>
+                <dd class="facts__val">Addition, subtraction, multiplication, division, mixed arithmetic, combinations (nCr), permutations (nPr)</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Problems</dt>
+                <dd class="facts__val">Generated in the browser, typeset as LaTeX with MathJax</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Stack</dt>
+                <dd class="facts__val">Static HTML and JavaScript, no backend, no accounts</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Address</dt>
+                <dd class="facts__val">itermath.jomontolalu.com</dd>
+              </div>
+            </dl>
 
-              <li class="work-item">
-                <article class="work-card work-card--link">
-                  <div>
-                    <h2 class="t-h3 work-item__name">
-                      <a class="work-link" href="https://itermath.jomontolalu.com" target="_blank" rel="noopener noreferrer">IterMath<span class="sr-only">Opens IterMath in a new tab</span></a>
-                    </h2>
-                    <p class="work-item__body">
-                      A simple web app that builds fluency in core math concepts through repeated
-                      practice.
-                    </p>
-                    <p class="work-item__foot">
-                      <span><b>Web application</b></span>
-                      <span>itermath.jomontolalu.com</span>
-                    </p>
-                  </div>
-                  <span class="work-item__icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" focusable="false">
-                      <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                </article>
-              </li>
+            <h3 class="t-h3">The problem</h3>
+            <p>
+              Students often drill the same concept without making progress. Repetition builds fluency
+              only when each attempt ends in clear feedback, and a worksheet gives none until someone
+              marks it.
+            </p>
 
-              <li class="work-item">
-                <article class="work-card work-card--link">
-                  <div>
-                    <h2 class="t-h3 work-item__name">
-                      <a class="work-link" href="https://bsqshuttle.jomontolalu.com" target="_blank" rel="noopener noreferrer">BSQShuttle<span class="sr-only">Opens BSQShuttle in a new tab</span></a>
-                    </h2>
-                    <p class="work-item__body">
-                      An unofficial schedule tracker for the Binus Square shuttle bus, giving students
-                      departure and arrival times across the Kemanggisan, Alam Sutera, and JWC/FX routes.
-                    </p>
-                    <p class="work-item__foot">
-                      <span><b>Web application</b></span>
-                      <span>bsqshuttle.jomontolalu.com</span>
-                    </p>
-                  </div>
-                  <span class="work-item__icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" focusable="false">
-                      <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                </article>
-              </li>
+            <h3 class="t-h3">How it works</h3>
+            <p>
+              Each module generates its problems procedurally, and the generators are built so the
+              arithmetic always comes out clean. A division problem is created from its answer, so the
+              quotient is always a whole number. Subtraction always takes the smaller number from the
+              larger, so no negative result reaches a beginner. Mixed arithmetic draws from six
+              expression templates that guarantee integer answers.
+            </p>
+            <p>
+              A correct answer moves straight on to the next problem. A wrong one stops and shows the
+              method: for combinations and permutations, the full factorial derivation down to the
+              number; for mixed arithmetic, the correct result with a reminder of the order of
+              operations.
+            </p>
 
-              <li class="work-item">
-                <article class="work-card work-card--link">
-                  <div>
-                    <h2 class="t-h3 work-item__name">
-                      <a class="work-link" href="https://www.instagram.com/codingclub.rex/" target="_blank" rel="noopener noreferrer">Rex Mundi Coding Club<span class="sr-only">Opens the Rex Mundi Coding Club Instagram in a new tab</span></a>
-                    </h2>
-                    <p class="work-item__body">
-                      A student-led high school organisation I co-founded with some partner, founded to help
-                      other students with practical programming skills.
-                    </p>
-                    <p class="work-item__foot">
-                      <span><b>Community</b></span>
-                      <span>Instagram</span>
-                    </p>
-                  </div>
-                  <span class="work-item__icon" aria-hidden="true">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" focusable="false">
-                      <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                </article>
-              </li>
+            <h3 class="t-h3">Why it is built this way</h3>
+            <p>
+              There are no accounts and no server. Every module is a static page, so practice starts
+              as soon as it loads, on any device with a browser. The loop of attempt, then
+              explanation, is the whole product, and nothing else stands between a student and the
+              next problem.
+            </p>
+          </div>
+        </article>
 
-            </ul>
+        <!-- BSQShuttle -->
+        <article class="chapter" id="bsqshuttle" aria-labelledby="bsqshuttle-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">03 · Web application</p>
+            <h2 class="t-h2" id="bsqshuttle-title">BSQShuttle</h2>
+            <p class="t-lead t-quiet">
+              An unofficial timetable for the Binus Square shuttle that reads the device clock to show
+              the last departure, the next one, and the full schedule for the Kemanggisan, Alam Sutera
+              and JWC/FX routes.
+            </p>
+            <div class="actions">
+              <a class="btn btn--ghost" href="https://bsqshuttle.jomontolalu.com" target="_blank" rel="noopener noreferrer">
+                Open BSQShuttle
+                <svg class="btn__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+                  <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="sr-only">(opens in a new tab)</span>
+              </a>
+            </div>
+          </header>
+
+          <div class="prose flow">
+            <dl class="facts">
+              <div class="facts__row">
+                <dt class="facts__key">Routes</dt>
+                <dd class="facts__val">Kemanggisan (BSQ, Kijang, Syahdan, Anggrek), Alam Sutera and JWC/FX</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Timetable</dt>
+                <dd class="facts__val">33 daily departures across three routes</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Stack</dt>
+                <dd class="facts__val">One static HTML page with vanilla JavaScript, no backend</dd>
+              </div>
+              <div class="facts__row">
+                <dt class="facts__key">Status</dt>
+                <dd class="facts__val">Independent student project, not affiliated with Bina Nusantara</dd>
+              </div>
+            </dl>
+
+            <h3 class="t-h3">The problem</h3>
+            <p>
+              Students living at Binus Square take a shuttle to campus, and a missed bus is costly: the
+              Alam Sutera route runs only three times a day. Checking the schedule should take seconds
+              and answer one question: when the next bus leaves.
+            </p>
+
+            <h3 class="t-h3">How it works</h3>
+            <p>
+              Each route is stored as structured data: the departure time, the intermediate stops, the
+              arrival and the unit running it. The page reads the device clock, marks the last
+              departure and the next one, and highlights the next row in the timetable, refreshing
+              every minute.
+            </p>
+            <p>
+              The Kemanggisan route mixes three kinds of run: regular buses that stop at Kijang and
+              Syahdan, bypass buses that go straight to Anggrek, and departures served by two units at
+              once. Filters show one kind at a time. Each route also carries the operator's notes, such
+              as a full bus leaving before its scheduled time, or schedules changing during online
+              classes.
+            </p>
+
+            <h3 class="t-h3">Why there is no backend</h3>
+            <p>
+              A timetable of 33 departures does not need a database or an API. Keeping it as data inside
+              one static page means the page loads quickly on a phone and has nothing to keep
+              running.
+            </p>
+          </div>
+        </article>
+
+        <!-- Rex Mundi Coding Club -->
+        <article class="chapter" id="rex-mundi" aria-labelledby="rex-mundi-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">04 · Community</p>
+            <h2 class="t-h2" id="rex-mundi-title">Rex Mundi Coding Club</h2>
+            <p class="t-lead t-quiet">
+              A student-led high school organisation I co-founded with a partner, set up to help other
+              students build practical programming skills.
+            </p>
+            <div class="actions">
+              <a class="btn btn--ghost" href="https://www.instagram.com/codingclub.rex/" target="_blank" rel="noopener noreferrer">
+                Rex Mundi on Instagram
+                <svg class="btn__icon" viewBox="0 0 16 16" fill="none" aria-hidden="true" focusable="false">
+                  <path d="M4.5 11.5L11.5 4.5M11.5 4.5H5.75M11.5 4.5V10.25" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="sr-only">(opens in a new tab)</span>
+              </a>
+            </div>
+          </header>
+        </article>
+
+        <div class="closing flow" data-reveal>
+          <p class="t-lead">
+            Working on a model for an under-served language, or a tool that has to keep running after
+            launch? Email is the fastest way to reach me.
+          </p>
+          <div class="actions">
+            <a class="btn btn--solid" href="mailto:hello@jomontolalu.com">Email hello@jomontolalu.com</a>
+            <a class="btn btn--ghost" href="capabilities.html">How I work</a>
           </div>
         </div>
+
       </div>
-    </section>
+    </div>
 
   </main>
 
@@ -306,6 +653,6 @@
   </footer>
 
   <!-- Bump ?v= on every release: a stale cached assets/script.js with this page shows only the fallback -->
-  <script src="assets/script.js?v=2026-10-05" defer></script>
+  <script src="assets/script.js?v=2026-10-05" defer onerror="document.documentElement.classList.add('no-js')"></script>
 </body>
 </html>
