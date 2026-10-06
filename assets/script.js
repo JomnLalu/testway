@@ -8,9 +8,10 @@
    every resize, so the architecture frames the content instead of sitting
    behind it.
 
-   Page          each HTML file names itself on <body data-page>. That key
-                 picks the chapter (stone or petrol ground) and the formation
-                 the walls are built in, before the first frame is drawn
+   Page          <body data-page> picks the formation the walls are built
+                 in; <html data-chapter>, written in each HTML file, picks the
+                 chapter (stone or petrol ground), before the first frame is
+                 drawn
    Scroll        the walls travel toward the horizon at a parallax rate
    Pointer       a raycast onto the crest of the walls drives a topographic
                  well: blocks under the cursor sink, a ring around them rises
@@ -25,27 +26,14 @@
   var root = document.documentElement;
 
   /* ------------------------------------------------------------------------
-     Utilities
+     Utilities. The script uses import(), so every engine that parses it has
+     requestAnimationFrame, performance.now and passive listeners.
      ------------------------------------------------------------------------ */
-  var raf = window.requestAnimationFrame
-    ? function (fn) { return window.requestAnimationFrame(fn); }
-    : function (fn) { return window.setTimeout(function () { fn(Date.now()); }, 16); };
+  var raf = window.requestAnimationFrame.bind(window);
+  var clock = window.performance.now.bind(window.performance);
+  var PASSIVE = { passive: true };
 
-  var clock = (window.performance && window.performance.now)
-    ? function () { return window.performance.now(); }
-    : function () { return Date.now(); };
-
-  var PASSIVE = false;
-  try {
-    var probe = Object.defineProperty({}, 'passive', {
-      get: function () { PASSIVE = { passive: true }; return true; }
-    });
-    window.addEventListener('probe', null, probe);
-    window.removeEventListener('probe', null, probe);
-  } catch (err) {
-    PASSIVE = false;
-  }
-
+  /* Safari before 14 parses import() but has only MediaQueryList.addListener */
   function onMedia(mq, fn) {
     if (mq.addEventListener) mq.addEventListener('change', fn);
     else if (mq.addListener) mq.addListener(fn);
@@ -59,20 +47,26 @@
     return current + (target - current) * (1 - Math.exp(-lambda * dt));
   }
 
+  /* Design tokens, read from the stylesheet (it blocks this deferred script,
+     so it has always loaded by now): one source for colour and timing. */
+  var tokens = window.getComputedStyle(root);
+  function token(name) { return tokens.getPropertyValue(name).trim(); }
+  function ms(name) { return parseFloat(token(name)) || 0; }
+  function hex(name) { return parseInt(token(name).slice(1), 16); }
+
   var reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var narrowQuery = window.matchMedia('(max-width: 899px)');
+  /* The stylesheet's narrow breakpoint */
+  var narrowQuery = window.matchMedia('(width < 896px)');
   var reduced = reducedQuery.matches;
   var coarse = window.matchMedia('(pointer: coarse)').matches;
-  var narrow = narrowQuery.matches;
 
-  /* The only colours the scene may use. */
+  /* The only colours the scene may use: the brand tokens */
   var PALETTE = {
-    stone: 0xE5E6E1,
-    petrol: 0x0B1618,
-    chalk: 0xE8EAE6,
-    ink: 0x14181A,
-    seaLight: 0x7FC9B6,
-    seaDeep: 0x17564A
+    stone: hex('--stone'),
+    petrol: hex('--petrol'),
+    chalk: hex('--chalk'),
+    ink: hex('--ink'),
+    seaLight: hex('--sea-light')
   };
 
   function scrollY() {
@@ -80,40 +74,35 @@
   }
 
   /* ------------------------------------------------------------------------
-     Pages: the one key every module reads. <body data-page> names the page.
-     Its chapter is also written into that file's <html data-chapter> and
-     theme-color, so the first paint is right before this script runs:
-     keep the two in step.
+     Pages: <body data-page> names the page and picks its formation. The
+     chapter (stone or petrol ground) is read from <html data-chapter>, the
+     one place each HTML file declares it, so the first paint is right
+     before this script runs.
 
      Formations are in height modules. The two columns on the canyon edge
      form a clean cliff; rise and noise build the mass behind it. Every `bay`
      rows the wall opens and a glass slat stands in the gap.
      ------------------------------------------------------------------------ */
   var PAGES = {
-    home: {
-      chapter: 'light',   /* the monolith */
+    home: {           /* the monolith */
       formation: { base: 10, rise: 1, noise: 8, bay: 6, depth: 0.9 }
     },
-    about: {
-      chapter: 'light',   /* terraces */
+    about: {          /* terraces */
       formation: { base: 6, rise: 2, noise: 0, bay: 8, depth: 0.9 }
     },
-    capabilities: {
-      chapter: 'light',   /* four-block bays */
+    capabilities: {   /* four-block bays */
       formation: { base: 6, rise: 1, noise: 0, bay: 5, depth: 0.9, zig: 2 }
     },
-    work: {
-      chapter: 'dark',    /* data slats */
+    work: {           /* data slats */
       formation: { base: 4, rise: 1, noise: 0, bay: 4, depth: 0.42, wave: 8 }
     },
-    contact: {
-      chapter: 'dark',    /* the monolith settles */
+    contact: {        /* the monolith settles */
       formation: { base: 3, rise: 1, noise: 3, bay: 9, depth: 0.9 }
     }
   };
 
   var page = PAGES[document.body.getAttribute('data-page')] || PAGES.home;
-  var dark = page.chapter === 'dark';
+  var dark = root.getAttribute('data-chapter') === 'dark';
 
   /* ------------------------------------------------------------------------
      Frame-batched scroll and resize subscribers
@@ -162,16 +151,16 @@
   /* ------------------------------------------------------------------------
      Boot overlay: waits for fonts and the first rendered frame, once per
      visit. Every later page opens warm (the inline script in each <head>
-     reads BOOT_KEY): no overlay, the copy enters straight away and the
-     stage fades in when its first frame is ready.
+     reads BOOT_KEY): no overlay, the copy is in place from the first frame
+     and the stage fades in when its first frame is ready.
      ------------------------------------------------------------------------ */
   var BOOT_KEY = 'jm:booted';
+  var warm = root.getAttribute('data-boot') === 'warm';
 
   var boot = (function () {
     var el = document.getElementById('boot');
     var bar = document.getElementById('bootBar');
     var label = document.getElementById('bootLabel');
-    var warm = root.getAttribute('data-boot') === 'warm';
     var total = 2;
     var done = 0;
     var finished = false;
@@ -188,8 +177,14 @@
       if (el) el.setAttribute('data-done', 'true');
       root.setAttribute('data-booted', 'true');
       /* The head script falls back to no-js if this file is slow or fails;
-         a late boot takes the page back */
-      root.classList.remove('no-js');
+         a late boot takes the page back. Blocks the fallback was showing
+         stay shown, wherever the reader has scrolled. */
+      if (root.classList.contains('no-js')) {
+        Array.prototype.forEach.call(document.querySelectorAll('[data-reveal]'), function (item) {
+          item.classList.add('is-in', 'is-instant');
+        });
+        root.classList.remove('no-js');
+      }
       while (queue.length) queue.shift()();
     }
 
@@ -198,13 +193,13 @@
       finished = true;
       try { window.sessionStorage.setItem(BOOT_KEY, '1'); } catch (err) { /* storage blocked: every page boots cold */ }
       if (warm) {
-        /* Let the entrance styles paint once, so the copy still eases in */
-        raf(function () { raf(release); });
+        release();
         return;
       }
       if (bar) bar.style.transform = 'scaleX(1)';
       if (label) label.textContent = 'Ready';
-      window.setTimeout(release, reduced ? 0 : 180);
+      /* Lift the overlay once the bar's last step has landed */
+      window.setTimeout(release, reduced ? 0 : ms('--t-base'));
     }
 
     if (warm) {
@@ -229,24 +224,20 @@
   })();
 
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(function () { boot.step(); })['catch'](function () { boot.step(); });
+    document.fonts.ready.then(function () { boot.step(); }).catch(function () { boot.step(); });
   } else {
     boot.step();
   }
 
   /* ------------------------------------------------------------------------
-     Chrome: chapter, menu and scrolled state. The current page is marked
-     with aria-current="page" in each HTML file, so it needs no script.
+     Chrome: menu and scrolled state. The chapter and the current page
+     (aria-current="page") are written in each HTML file, so they need no
+     script.
      ------------------------------------------------------------------------ */
   (function chrome() {
     var masthead = document.getElementById('masthead');
     var toggle = document.getElementById('menuToggle');
     var menu = document.getElementById('menu');
-    var themeMeta = document.getElementById('themeColor');
-
-    /* Normally a no-op: the HTML already carries the page's chapter */
-    root.setAttribute('data-chapter', page.chapter);
-    if (themeMeta) themeMeta.setAttribute('content', dark ? '#0B1618' : '#E5E6E1');
 
     if (!masthead || !toggle || !menu) return;
 
@@ -270,9 +261,22 @@
       }
     });
 
+    /* A tap outside the open menu only closes it: it never reaches the
+       stage's pulse (registered later on the same target). The state is read
+       at the press, because the press moves focus out of the masthead and
+       the focusout handler below has closed the menu before the click. */
+    var openAtPress = false;
+
+    document.addEventListener('pointerdown', function () {
+      openAtPress = masthead.getAttribute('data-open') === 'true';
+    }, true);
+
     document.addEventListener('click', function (e) {
-      if (masthead.getAttribute('data-open') !== 'true') return;
-      if (!masthead.contains(e.target)) setMenu(false);
+      var wasOpen = openAtPress || masthead.getAttribute('data-open') === 'true';
+      openAtPress = false;
+      if (!wasOpen || masthead.contains(e.target)) return;
+      setMenu(false);
+      e.stopImmediatePropagation();
     });
 
     /* Tabbing out of the open menu closes it, so it never hangs over the page */
@@ -282,8 +286,7 @@
     });
 
     onMedia(narrowQuery, function (e) {
-      narrow = e.matches;
-      if (!narrow) setMenu(false);
+      if (!e.matches) setMenu(false);
     });
 
     var scrolled = null;
@@ -312,12 +315,19 @@
       return;
     }
 
+    /* Blocks already on screen at boot belong to the opening: on a cold
+       boot they follow the page head's stagger, on a warm page they are in
+       place from the first frame, like the page head itself */
+    var opening = true;
+
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
         if (!entry.isIntersecting) return;
+        if (opening) entry.target.classList.add(warm ? 'is-instant' : 'is-late');
         entry.target.classList.add('is-in');
         io.unobserve(entry.target);
       });
+      opening = false;
     /* Threshold 0: a chapter much taller than the screen (the MangARTI case
        study) can never show 8% of itself at once, so any ratio would strand it */
     }, { rootMargin: '0px 0px -12% 0px', threshold: 0 });
@@ -333,27 +343,38 @@
     var status = document.getElementById('copyStatus');
     if (!btn) return;
 
-    var labelEl = btn.querySelector('.btn__label');
     var address = btn.getAttribute('data-copy');
+    /* How long the confirmation stays up: reading time, not motion */
+    var DONE_HOLD = 2800;
+    var busy = false;
+    var slowTimer = null;
     var resetTimer = null;
 
-    /* aria-disabled, not disabled: a disabled button loses keyboard focus */
-    function setState(state, label, message) {
+    /* The markup ships the button hidden: without script it could not copy */
+    btn.hidden = false;
+
+    /* The labels live in the markup; a state only picks which one shows.
+       aria-disabled, not disabled: a disabled button loses keyboard focus. */
+    function setState(state, message) {
       btn.setAttribute('data-state', state);
       btn.setAttribute('aria-disabled', state === 'working' ? 'true' : 'false');
-      labelEl.textContent = label;
       if (status) status.textContent = message || '';
     }
 
-    function reset() {
-      setState('idle', 'Copy email address', '');
+    function settle(state, message) {
+      window.clearTimeout(slowTimer);
+      busy = false;
+      setState(state, message);
+      if (state === 'done') {
+        resetTimer = window.setTimeout(function () { setState('idle', ''); }, DONE_HOLD);
+      }
     }
 
     function fallbackCopy(text) {
+      var active = document.activeElement;
       var input = document.createElement('input');
       input.value = text;
       input.setAttribute('readonly', '');
-      input.setAttribute('aria-hidden', 'true');
       input.style.position = 'fixed';
       input.style.top = '0';
       input.style.opacity = '0';
@@ -362,32 +383,28 @@
       var ok = false;
       try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
       document.body.removeChild(input);
+      /* select() moved focus to the temporary input: hand it back */
+      if (active && active.focus) active.focus({ preventScroll: true });
       return ok;
     }
 
     btn.addEventListener('click', function () {
-      if (btn.getAttribute('aria-disabled') === 'true') return;
+      if (busy) return;
+      busy = true;
       window.clearTimeout(resetTimer);
-      setState('working', 'Copying', '');
-      var started = Date.now();
+      if (status) status.textContent = '';
+      /* The spinner shows only if the clipboard is slow: a copy that lands
+         within one --t-base step goes straight to its result, no flash */
+      slowTimer = window.setTimeout(function () { setState('working', ''); }, ms('--t-base'));
 
       var task = (navigator.clipboard && navigator.clipboard.writeText)
         ? navigator.clipboard.writeText(address)
         : (fallbackCopy(address) ? Promise.resolve() : Promise.reject(new Error('blocked')));
 
-      function settle(fn) {
-        window.setTimeout(fn, Math.max(0, 220 - (Date.now() - started)));
-      }
-
       task.then(function () {
-        settle(function () {
-          setState('done', 'Email address copied', address + ' is on your clipboard.');
-          resetTimer = window.setTimeout(reset, 2800);
-        });
-      })['catch'](function () {
-        settle(function () {
-          setState('idle', 'Copy email address', 'Your browser blocked the clipboard. The address is ' + address + '.');
-        });
+        settle('done', address + ' is on your clipboard.');
+      }).catch(function () {
+        settle('idle', 'Your browser blocked the clipboard. The address is ' + address + '.');
       });
     });
   })();
@@ -402,7 +419,7 @@
   ];
 
   function loadThree(i) {
-    return import(THREE_URLS[i])['catch'](function (err) {
+    return import(THREE_URLS[i]).catch(function (err) {
       if (i + 1 < THREE_URLS.length) return loadThree(i + 1);
       throw err;
     });
@@ -420,7 +437,18 @@
       boot.step();
     }
 
-    if (!canvas) return;
+    if (!canvas) {
+      boot.step();
+      return;
+    }
+
+    /* A colour that failed to read (stylesheet missing) would paint black */
+    for (var name in PALETTE) {
+      if (isNaN(PALETTE[name])) {
+        unavailable('The brand tokens could not be read from the stylesheet.');
+        return;
+      }
+    }
 
     if (!('WebGL2RenderingContext' in window)) {
       unavailable('This browser has no WebGL 2.');
@@ -429,7 +457,7 @@
 
     loadThree(0).then(build, function (err) {
       unavailable('three.js could not be loaded: ' + (err && err.message ? err.message : err));
-    })['catch'](unavailable);
+    }).catch(unavailable);
 
     function build(THREE) {
       var renderer;
@@ -501,6 +529,7 @@
       /* The whole canyon is built in this page's formation (see PAGES), from
          the very first frame: nothing about it depends on scroll depth. */
       var FORMATION = page.formation;
+      var DEPTH = FORMATION.depth * CELL;
       var CLIFF = 2;
 
       var maxDpr = coarse ? 1.5 : 2;
@@ -538,7 +567,7 @@
         uPetrol: { value: new THREE.Color(PALETTE.petrol) },
         uAlbedo: { value: new THREE.Color(PALETTE.stone) },
         uAlbedoDark: { value: tone(PALETTE.petrol, PALETTE.stone, 0.16) },
-        uLineDark: { value: tone(PALETTE.petrol, PALETTE.chalk, 0.42) },
+        uLineDark: { value: tone(PALETTE.petrol, PALETTE.chalk, 0.40) },
         uAmbientDark: { value: 0.55 },
         uPulse: { value: new THREE.Color(PALETTE.seaLight).multiplyScalar(1.6) },
         uPulseFilter: { value: new THREE.Color(PALETTE.seaLight) }
@@ -586,7 +615,7 @@
          in front, instead of across the floor under the copy. */
       var LIGHT_DIR = new THREE.Vector3(-0.14, 0.44, -0.89).normalize();
 
-      var key = new THREE.DirectionalLight(0xFFFFFF, 3.7);
+      var key = new THREE.DirectionalLight(PALETTE.chalk, 4.5);
       key.castShadow = true;
       key.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
       key.shadow.bias = -0.0004;
@@ -617,7 +646,7 @@
         /* The slats are seen from above and in front: their faces mirror the
            lower half of the room behind the camera, their crests the upper
            half toward the key light. */
-        add(new THREE.BoxGeometry(30, 16, 30), tone(PALETTE.petrol, PALETTE.chalk, 0.18), 0, 2, 0, THREE.BackSide);
+        add(new THREE.BoxGeometry(30, 16, 30), tone(PALETTE.petrol, PALETTE.chalk, 0.16), 0, 2, 0, THREE.BackSide);
         add(new THREE.PlaneGeometry(12, 5), new THREE.Color(PALETTE.chalk).multiplyScalar(3.2), -3, 9, -12);
         add(new THREE.PlaneGeometry(26, 3), new THREE.Color(PALETTE.chalk).multiplyScalar(1.6), 0, -4, 13);
         add(new THREE.PlaneGeometry(26, 0.5), new THREE.Color(PALETTE.seaLight).multiplyScalar(2.6), 0, -1, 14);
@@ -634,7 +663,8 @@
       /* Matte structure: heavy stone on the light chapter, lifted petrol on the
          dark one, with hairline edges and module joints measured from the top,
          so a block that sinks loses modules into the floor. */
-      var matteMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.94, metalness: 0 });
+      /* The shader below replaces the base colour; stone documents the intent */
+      var matteMat = new THREE.MeshStandardMaterial({ color: PALETTE.stone, roughness: 0.94, metalness: 0 });
       matteMat.onBeforeCompile = function (shader) {
         shader.uniforms.uDark = uniforms.uDark;
         shader.uniforms.uJoint = uniforms.uJoint;
@@ -769,14 +799,13 @@
       /* Per-slot state */
       var height = new Float32Array(COUNT);
       var base = new Float32Array(COUNT);
-      var depth = new Float32Array(COUNT);
       var glassy = new Uint8Array(COUNT);
       var rowOf = new Int32Array(COUNT);
 
       /* Shadow catcher: the floor is the exact backdrop colour, only darker in shadow */
       var ground = new THREE.Mesh(
         new THREE.PlaneGeometry(1, 1),
-        new THREE.ShadowMaterial({ color: PALETTE.ink, opacity: 0.14 })
+        new THREE.ShadowMaterial({ color: PALETTE.ink, opacity: 0.16 })
       );
       ground.rotation.x = -Math.PI / 2;
       ground.receiveShadow = true;
@@ -963,7 +992,6 @@
         if (isGlass) m += GLASS_RISE;
         base[i] = clamp(m, 1, TALLEST) * MODULE;
         glassy[i] = isGlass ? 1 : 0;
-        depth[i] = P.depth * CELL;
       }
 
       /* ---- Interaction state ---------------------------------------------------- */
@@ -1056,7 +1084,7 @@
                 if (p !== pulseArr[i]) { pulseArr[i] = p; pulsed = true; }
                 if (p > 0) busy = true;
               } else {
-                writeBox(mA, i, x, z, MATTE_W * CELL, h, depth[i]);
+                writeBox(mA, i, x, z, MATTE_W * CELL, h, DEPTH);
                 writeBox(gA, i, x, z, 0, 0, 0);
                 if (pulseArr[i] !== 0) { pulseArr[i] = 0; pulsed = true; }
               }
@@ -1219,8 +1247,9 @@
         });
       }
 
-      /* A click on the page itself (not on a control) sends a pulse */
-      var CONTROLS = 'a, button, input, select, textarea, label, summary, [role="button"]';
+      /* A click on the page itself (not on a control, not on the masthead)
+         sends a pulse */
+      var CONTROLS = 'a, button, input, select, textarea, label, summary, [role="button"], #masthead';
       document.addEventListener('click', function (e) {
         if (reduced || e.button !== 0 || e.detail === 0) return;
         if (e.target && e.target.closest && e.target.closest(CONTROLS)) return;
