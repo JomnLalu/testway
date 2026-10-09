@@ -485,9 +485,12 @@ strong {
 /* --------------------------------------------------------------------------
    5. Layout: masthead and footer span the full container; every section
       sits in the canyon, one centred column. The periphery is left to the
-      architecture. Each page is one section. It fills the space between
-      the masthead and the footer, so the footer never floats above the
-      bottom of the screen.
+      architecture. Each page is one section, labelled by its h1. It fills
+      the space between the masthead and the footer, so the footer never
+      floats above the bottom of the screen. The home page alone continues
+      under its first screen in an unlabelled .section--continued, on the
+      same surface as the hero; page-level .section overrides (no script,
+      print) must account for it.
    -------------------------------------------------------------------------- */
 main {
   position: relative;
@@ -519,13 +522,14 @@ main {
 
 /* The home page continues under its first screen with a summary of every
    page. It is one surface with the hero: no second masthead offset, and its
-   first hairline sits where the hero's bottom padding ends. */
+   first hairline keeps the --block-gap rhythm under the hero copy, rising
+   into the hero's floor padding. */
 .section--continued {
   padding-top: 0;
 }
 
 .section--continued .chapter:first-child {
-  margin-top: 0;
+  margin-top: calc(var(--block-gap) - var(--section-y));
 }
 
 .container {
@@ -1256,7 +1260,8 @@ code {
     column-gap: var(--s-24);
   }
 
-  .no-js .section {
+  /* (the home page's continuation has no masthead offset to replace) */
+  .no-js .section:not(.section--continued) {
     padding-top: var(--s-64);
   }
 }
@@ -1627,6 +1632,11 @@ html[data-boot="warm"] .boot-in {
   .section {
     padding-top: var(--s-32);
     padding-bottom: var(--s-32);
+  }
+
+  /* The two section paddings already make the printed --block-gap */
+  .section--continued .chapter:first-child {
+    margin-top: 0;
   }
 
   [data-reveal],
