@@ -1,41 +1,11 @@
-/* ==========================================================================
-   jomontolalu.com
-   One stylesheet for every page: index, about, capabilities, work, contact.
-   Tokens -> roles -> base -> type -> layout -> components -> hover ->
-   masthead -> footer -> boot -> stage -> scrims -> entrances -> page
-   transitions -> reduced motion -> print
-
-   The system, stated once:
-   Spacing  4px scale only: 4 8 12 16 24 32 48 64 96 128. Layout widths are
-            whole multiples of 64 or 128. Breakpoints: 896, 1024, 1152, 1280.
-   Colour   five brand tokens: Stone, Petrol, Chalk, Sea Green, Ink. Sea
-            Green carries one tone per ground, chosen for contrast. Every
-            other colour is a brand token on the 8% alpha ladder.
-   Shape    one 4px radius. 1px strokes everywhere (borders, hairlines,
-            icons, spinner); the 2px focus ring is the one exception.
-            No shadows: depth comes from the stage, never from the UI.
-   Type     two faces, one ramp. Line-height 1.1 for headings and one-line
-            control labels, 1.5 for everything that reads as text.
-   Motion   one duration ladder. --ease for colour and opacity,
-            --ease-heavy for anything that moves.
-   ========================================================================== */
-
-/* --------------------------------------------------------------------------
-   1. Tokens
-   -------------------------------------------------------------------------- */
 :root {
-  /* Brand palette. assets/script.js reads these values for the WebGL
-     scene, so they are the only colours on the page and in the stage. */
   --stone: #E5E6E1;
   --petrol: #0B1618;
   --chalk: #E8EAE6;
   --ink: #14181A;
-  /* Sea Green: the light tone on petrol, the deep tone on stone */
   --sea-light: #7FC9B6;
   --sea-deep: #17564A;
 
-  /* Alpha ladder: every translucent colour is a brand token at one of
-     these steps, all multiples of 8% */
   --a-08: 8%;
   --a-16: 16%;
   --a-40: 40%;
@@ -46,7 +16,6 @@
   --a-88: 88%;
   --a-96: 96%;
 
-  /* Derived tones: a brand token on the ladder, never a new hue */
   --ink-mid: color-mix(in srgb, var(--ink) var(--a-72), transparent);
   --chalk-mid: color-mix(in srgb, var(--chalk) var(--a-72), transparent);
   --line-on-light: color-mix(in srgb, var(--ink) var(--a-16), transparent);
@@ -56,7 +25,6 @@
   --glass-on-light: color-mix(in srgb, var(--stone) var(--a-88), transparent);
   --glass-on-dark: color-mix(in srgb, var(--petrol) var(--a-88), transparent);
 
-  /* 4px spacing scale */
   --s-4: 4px;
   --s-8: 8px;
   --s-12: 12px;
@@ -68,47 +36,29 @@
   --s-96: 96px;
   --s-128: 128px;
 
-  /* Layout */
   --gutter: var(--s-24);
   --section-y: var(--s-96);
-  /* Between the major blocks of a long page: page head, chapters, closing */
   --block-gap: var(--s-64);
   --masthead-h: var(--s-64);
-  /* Every page starts one 64px step under the fixed masthead */
   --page-top: calc(var(--masthead-h) + var(--s-64) + env(safe-area-inset-top, 0px));
-  /* 10 x 128 */
   --container: 1280px;
-  /* The copy column: the empty floor between the two walls of the stage.
-     The stage measures this column and fits the canyon to it. */
   --canyon: var(--container);
 
-  /* Component dimensions */
   --tap: var(--s-48);
   --icon-sm: var(--s-16);
   --icon-md: var(--s-24);
-  /* 3 x 64 */
   --facts-key-col: 192px;
-  /* 5 x 64 */
   --split-w: 320px;
 
-  /* Type: one display face, one body face */
   --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --font-body: "Newsreader", "Iowan Old Style", Georgia, "Times New Roman", serif;
 
-  /* One ramp. Every fluid step interpolates over the same range: --fluid
-     is 0 at a 360px viewport and 1rem at 1440px. */
   --fluid: ((100vw - 22.5rem) / 67.5);
-  /* 14px: every label, control and meta line */
   --size-xs: 0.875rem;
-  /* 18px: running text */
   --size-body: 1.125rem;
-  /* 20 -> 22px */
   --size-lead: clamp(1.25rem, calc(1.25rem + 0.125 * var(--fluid)), 1.375rem);
-  /* 24 -> 28px */
   --size-h3: clamp(1.5rem, calc(1.5rem + 0.25 * var(--fluid)), 1.75rem);
-  /* 32 -> 44px */
   --size-h2: clamp(2rem, calc(2rem + 0.75 * var(--fluid)), 2.75rem);
-  /* 40 -> 84px */
   --size-display: clamp(2.5rem, calc(2.5rem + 2.75 * var(--fluid)), 5.25rem);
 
   --lh-heading: 1.1;
@@ -123,16 +73,13 @@
   --measure-heading: 24ch;
   --measure-display: 18ch;
 
-  /* Shape */
   --radius: var(--s-4);
   --border: 1px;
   --ring: 2px;
   --blur: var(--s-12);
   --underline-offset: var(--s-4);
 
-  /* Motion. Colour and opacity: a quick start and a long, soft settle. */
   --ease: cubic-bezier(.2, .7, .2, 1);
-  /* Anything that moves: a slow start and a firm stop, never past the target */
   --ease-heavy: cubic-bezier(.65, 0, .15, 1);
   --t-stagger: 80ms;
   --t-fast: 160ms;
@@ -140,7 +87,6 @@
   --t-slow: 400ms;
   --t-enter: 640ms;
 
-  /* Layers */
   --z-below: -1;
   --z-stage: 0;
   --z-page: 10;
@@ -149,7 +95,6 @@
   --z-skip: 40;
 }
 
-/* The canyon steps through whole multiples of 64 */
 @media (width >= 896px) {
   :root {
     --canyon: 640px;
@@ -176,10 +121,6 @@
   }
 }
 
-/* --------------------------------------------------------------------------
-   2. Roles: each page carries its chapter on <html data-chapter>, and each
-      section (and the footer) its own contrast pair on .scene-*
-   -------------------------------------------------------------------------- */
 :root,
 .scene-light {
   --bg: var(--stone);
@@ -193,7 +134,6 @@
   color-scheme: light;
 }
 
-/* Screen only: paper is always light, so print keeps the roles above */
 @media screen {
   html[data-chapter="dark"],
   .scene-dark {
@@ -215,9 +155,6 @@
   -webkit-tap-highlight-color: color-mix(in srgb, var(--signal) var(--a-16), transparent);
 }
 
-/* --------------------------------------------------------------------------
-   3. Base
-   -------------------------------------------------------------------------- */
 *,
 *::before,
 *::after {
@@ -228,11 +165,9 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
-  /* In-page anchors land one 32px step under the masthead */
   scroll-padding-top: calc(var(--masthead-h) + var(--s-32) + env(safe-area-inset-top, 0px));
   background-color: var(--bg);
   scrollbar-color: var(--fg-mid) var(--bg);
-  /* The only press feedback on touch: brand it rather than remove it */
   -webkit-tap-highlight-color: color-mix(in srgb, var(--signal) var(--a-16), transparent);
 }
 
@@ -282,13 +217,11 @@ button {
   color: inherit;
 }
 
-/* Newsreader is loaded at 400 and 600: bold never falls back to a faux weight */
 b,
 strong {
   font-weight: 600;
 }
 
-/* Components set their own display; hidden always wins */
 [hidden] {
   display: none !important;
 }
@@ -298,14 +231,12 @@ strong {
   color: var(--on-signal);
 }
 
-/* One focus treatment for every control, shown for keyboard use only */
 :focus-visible {
   outline: var(--ring) solid var(--signal);
   outline-offset: var(--s-4);
   border-radius: var(--radius);
 }
 
-/* Programmatic focus targets (the skip link lands on <main>) draw no ring */
 [tabindex="-1"]:focus {
   outline: none;
 }
@@ -343,11 +274,6 @@ strong {
   border: 0;
 }
 
-/* --------------------------------------------------------------------------
-   4. Type: every role is declared once, here
-   -------------------------------------------------------------------------- */
-
-/* Headings, and the word specimens set at heading size */
 .t-display,
 .t-h2,
 .t-h3,
@@ -382,7 +308,6 @@ strong {
   max-width: var(--measure-heading);
 }
 
-/* Control labels: one line, display face, set by the control's height */
 .btn,
 .split__link,
 .menu-toggle,
@@ -396,8 +321,6 @@ strong {
   line-height: var(--lh-heading);
 }
 
-/* Meta lines: kickers, keys, row descriptions, counters, captions,
-   status, footer */
 .t-kicker,
 .facts__key,
 .row__meta,
@@ -432,7 +355,6 @@ strong {
   color: var(--fg-mid);
 }
 
-/* Vertical rhythm: 24px by default, tightened or opened by what precedes */
 .flow > * + * {
   margin-top: var(--flow-space, var(--s-24));
 }
@@ -445,21 +367,15 @@ strong {
   --flow-space: var(--s-48);
 }
 
-/* A kicker that labels a chapter sits tight against its heading */
 .chapter__head > .t-kicker + * {
   --flow-space: var(--s-12);
 }
 
-/* A chapter's links (buttons or the split control) sit one step closer
-   than a page head's, since a chapter head is a smaller unit than a page */
 .chapter__head > .actions,
 .chapter__head > .split {
   --flow-space: var(--s-32);
 }
 
-/* Long-form text. Lists and figures sit 32px from the text around them.
-   Subsection headings come last so they always win: 64px above, 16px
-   below, so each one reads as the start of what follows it. */
 .prose > .steps,
 .prose > .facts,
 .prose > .variants,
@@ -482,16 +398,6 @@ strong {
   text-wrap: pretty;
 }
 
-/* --------------------------------------------------------------------------
-   5. Layout: masthead and footer span the full container; every section
-      sits in the canyon, one centred column. The periphery is left to the
-      architecture. Each page is one section, labelled by its h1. It fills
-      the space between the masthead and the footer, so the footer never
-      floats above the bottom of the screen. The home page alone continues
-      under its first screen in an unlabelled .section--continued, on the
-      same surface as the hero; page-level .section overrides (no script,
-      print) must account for it.
-   -------------------------------------------------------------------------- */
 main {
   position: relative;
   z-index: var(--z-page);
@@ -502,16 +408,12 @@ main {
 
 .section {
   position: relative;
-  /* Keeps the section's scrim inside its own stacking context */
   isolation: isolate;
   flex: 1 0 auto;
   padding-top: var(--page-top);
   padding-bottom: var(--section-y);
 }
 
-/* The home page: one screen, with the copy resting on its floor. The track
-   may shrink below its longest word, so enlarged text spacing wraps the
-   headline instead of widening the page. */
 .section--hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -520,10 +422,6 @@ main {
   min-height: 100svh;
 }
 
-/* The home page continues under its first screen with a summary of every
-   page. It is one surface with the hero: no second masthead offset, and its
-   first hairline keeps the --block-gap rhythm under the hero copy, rising
-   into the hero's floor padding. */
 .section--continued {
   padding-top: 0;
 }
@@ -551,8 +449,6 @@ main .container {
   gap: var(--s-12);
 }
 
-/* In a page head the status line floats under the buttons, so an empty
-   live region never adds height to the head and the --block-gap holds */
 .page-head {
   position: relative;
 }
@@ -561,9 +457,6 @@ main .container {
   position: absolute;
 }
 
-/* Inner pages read top to bottom in one column: a page head, then
-   chapters divided by hairlines, then a closing block. Every gap between
-   them is the same --block-gap, so long pages keep one rhythm. */
 .toc {
   margin-top: var(--block-gap);
 }
@@ -575,18 +468,11 @@ main .container {
   border-top: var(--border) solid var(--line);
 }
 
-/* Content under a chapter heading (a bare h2, or a head block with kicker,
-   lead and links) always starts one 32px step below it */
 .chapter__head + *,
 .chapter > .t-h2 + * {
   margin-top: var(--s-32);
 }
 
-/* --------------------------------------------------------------------------
-   6. Components
-   -------------------------------------------------------------------------- */
-
-/* Buttons: one 48px control, filled or glass */
 .btn {
   --btn-bg: transparent;
   --btn-fg: var(--fg);
@@ -634,8 +520,6 @@ main .container {
   --btn-fg: var(--signal);
 }
 
-/* A button whose label changes keeps one width: every label sits in the
-   same grid cell, and only the current one is visible (and named) */
 .btn__states {
   display: grid;
   justify-items: center;
@@ -655,7 +539,6 @@ main .container {
   visibility: visible;
 }
 
-/* Square spinner, in keeping with the modular block language */
 .btn__spinner {
   width: var(--icon-sm);
   height: var(--icon-sm);
@@ -681,8 +564,6 @@ main .container {
   color: var(--fg-mid);
 }
 
-/* Icons: one 16px glyph, drawn with the same 1px stroke as every hairline.
-   The sprite holds the symbols; each use is an .icon. */
 .sprite {
   display: none;
 }
@@ -698,14 +579,12 @@ main .container {
   stroke-linejoin: round;
 }
 
-/* Hairline lists: facts, steps and rows share one top rule */
 .facts,
 .steps,
 .rows {
   border-top: var(--border) solid var(--line);
 }
 
-/* Facts list */
 .facts__row {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -731,7 +610,6 @@ main .container {
   }
 }
 
-/* Inline text links: always underlined, so a link never rests on colour */
 .link {
   text-decoration-line: underline;
   text-decoration-thickness: var(--border);
@@ -742,15 +620,12 @@ main .container {
     text-decoration-color var(--t-fast) var(--ease);
 }
 
-/* An inline link that opens a new tab carries the same arrow as the buttons */
 .link > .icon {
   display: inline-block;
   margin-left: var(--s-4);
   vertical-align: middle;
 }
 
-/* Identifiers (model names, settings) set in the display face: one
-   typographic system, no third font for code */
 code {
   padding: 0 var(--s-4);
   border-radius: var(--radius);
@@ -763,8 +638,6 @@ code {
   box-decoration-break: clone;
 }
 
-/* Steps: an ordered method or pipeline. Hairline rows like the facts list,
-   numbered in a fixed column so the text edges line up. */
 .steps {
   counter-reset: step;
 }
@@ -802,7 +675,6 @@ code {
   }
 }
 
-/* Variants: words shown as specimens, each on the same lifted chip as code */
 .variants__list {
   display: flex;
   flex-wrap: wrap;
@@ -820,12 +692,6 @@ code {
   color: var(--fg-mid);
 }
 
-/* Split control: one 48px bar, two links.
-   At rest it reads as a single unit. On hover a hairline divides it and a
-   sea green block slides under the hovered half. The block belongs to the
-   second link (::before) but is positioned against the whole control, so
-   sibling selectors alone can move it. Everything that moves is a
-   transform inside the bar's own box: no reflow, nothing outside it. */
 .split {
   --inset: var(--s-4);
   position: relative;
@@ -845,19 +711,15 @@ code {
   align-items: center;
   justify-content: center;
   gap: var(--s-8);
-  /* The bar's border sits around the halves: together, one 48px control */
   min-height: calc(var(--tap) - 2 * var(--border));
   padding: 0 var(--s-16);
   border-radius: var(--radius);
   color: var(--fg);
   text-decoration: none;
   text-align: center;
-  /* The label's colour travels with the block under it, so it shares the
-     block's duration and curve rather than the colour default */
   transition: color var(--t-slow) var(--ease-heavy);
 }
 
-/* The hairline between the halves: hidden at rest */
 .split__link--code::after {
   content: "";
   position: absolute;
@@ -870,9 +732,6 @@ code {
   transition: transform var(--t-base) var(--ease-heavy);
 }
 
-/* The highlight: parked as a zero-width block on the centre line.
-   Left half: grows out of the centre. Right half: the same block, shifted
-   by its own width plus the gap. Switching halves is a straight slide. */
 .split__link--model::before {
   content: "";
   position: absolute;
@@ -887,7 +746,6 @@ code {
   transition: transform var(--t-slow) var(--ease-heavy);
 }
 
-/* Keyboard: the focused half takes the highlight */
 .split__link:focus-visible {
   color: var(--on-signal);
 }
@@ -900,8 +758,6 @@ code {
   transform: translateX(calc(100% + var(--inset))) scaleX(1);
 }
 
-/* ...and the bar takes the same ring as every other control. Keyed to
-   :focus-visible, so a mouse click never leaves the bar marked. */
 @supports selector(:has(a)) {
   .split__link:focus-visible {
     outline: none;
@@ -918,7 +774,6 @@ code {
   }
 }
 
-/* Without :has(), the ring is drawn inside the focused half */
 @supports not selector(:has(a)) {
   .split__link:focus-visible {
     outline-offset: calc(-1 * var(--ring));
@@ -933,7 +788,6 @@ code {
   }
 }
 
-/* Pointer: declared after focus so the half under the cursor always wins */
 @media (hover: hover) {
   .split:hover {
     border-color: var(--fg);
@@ -960,16 +814,12 @@ code {
   }
 }
 
-/* Touch screens never hover: show both halves as distinct targets */
 @media (hover: none) {
   .split__link--code::after {
     transform: scaleY(1);
   }
 }
 
-/* Rows: a list of destinations (contents, channels, capabilities). Each row
-   is one link: a name on the left, a quiet description on the right. The
-   hairline belongs to the list item, so a focus ring never reshapes it. */
 .rows > li {
   border-bottom: var(--border) solid var(--line);
 }
@@ -996,7 +846,6 @@ code {
   text-wrap: pretty;
 }
 
-/* Two lists stacked in one block are separate groups, not one long list */
 .rows + .facts {
   margin-top: var(--s-48);
 }
@@ -1014,11 +863,6 @@ code {
   }
 }
 
-/* --------------------------------------------------------------------------
-   7. Pointer hover: every hover state lives in this one query, so none of
-      them sticks after a tap on a touch screen. (The split control keeps
-      its own block above, next to the geometry it moves.)
-   -------------------------------------------------------------------------- */
 @media (hover: hover) {
   .btn--solid:not([aria-disabled="true"], [data-state="done"]):hover {
     --btn-bg: var(--signal);
@@ -1048,9 +892,6 @@ code {
   }
 }
 
-/* --------------------------------------------------------------------------
-   8. Masthead and navigation
-   -------------------------------------------------------------------------- */
 .masthead {
   position: fixed;
   top: 0;
@@ -1064,8 +905,6 @@ code {
   backdrop-filter: blur(var(--blur));
 }
 
-/* The hairline is drawn, not bordered, so the bar stays exactly
-   --masthead-h tall */
 .masthead::after {
   content: "";
   position: absolute;
@@ -1105,7 +944,6 @@ code {
   text-decoration: none;
 }
 
-/* Three bars on the 24px icon grid, stepping up the alpha ladder */
 .wordmark__mark {
   width: var(--icon-md);
   height: var(--icon-md);
@@ -1136,8 +974,6 @@ code {
   transition: color var(--t-fast) var(--ease);
 }
 
-/* The current page: full ink plus a signal hairline, so the state never
-   rests on colour alone */
 .nav a[aria-current="page"] {
   color: var(--fg);
   text-decoration-line: underline;
@@ -1150,8 +986,6 @@ code {
   display: none;
 }
 
-/* The menu button: the same 48px glass control as a ghost button, at the
-   compact 16px side padding so it fits beside the wordmark at 360px */
 .menu-toggle {
   display: inline-flex;
   align-items: center;
@@ -1169,7 +1003,6 @@ code {
   border-color: var(--fg);
 }
 
-/* Two 1px bars on an 8px pitch: opening slides each 4px onto one line */
 .menu-toggle__bars {
   display: grid;
   row-gap: calc(var(--s-8) - var(--border));
@@ -1193,7 +1026,6 @@ code {
 }
 
 @media (width < 896px) {
-  /* With script: the links drop down under the bar */
   html:not(.no-js) .nav {
     position: absolute;
     top: 100%;
@@ -1204,8 +1036,6 @@ code {
     visibility: hidden;
     opacity: 0;
     transform: translateY(calc(-1 * var(--s-4)));
-    /* Closing hides the links only after the fade; opening shows them at
-       once, so a keyboard user's next Tab always lands inside the menu */
     transition:
       opacity var(--t-base) var(--ease),
       transform var(--t-base) var(--ease-heavy),
@@ -1236,8 +1066,6 @@ code {
     font-size: var(--size-body);
   }
 
-  /* Without script the menu cannot open: the button goes, and the links
-     wrap onto a second row of a bar that scrolls away with the page */
   .no-js .menu-toggle {
     display: none;
   }
@@ -1260,14 +1088,11 @@ code {
     column-gap: var(--s-24);
   }
 
-  /* (the home page's continuation has no masthead offset to replace) */
   .no-js .section:not(.section--continued) {
     padding-top: var(--s-64);
   }
 }
 
-/* From 896px the nav sits on the container's centre axis, the same axis
-   as the canyon, whatever the widths of the wordmark and the button */
 @media (width >= 896px) {
   .masthead__inner {
     display: grid;
@@ -1289,9 +1114,6 @@ code {
   }
 }
 
-/* --------------------------------------------------------------------------
-   9. Footer: always petrol (class="scene-dark"), on the masthead's grid
-   -------------------------------------------------------------------------- */
 .site-footer {
   position: relative;
   z-index: var(--z-page);
@@ -1324,11 +1146,6 @@ code {
   }
 }
 
-/* --------------------------------------------------------------------------
-   10. Boot overlay: plays on the first page of a visit, in that page's
-       chapter. Later pages skip it (data-boot="warm", set in each <head>):
-       the copy is in place at once and the stage fades in when ready.
-   -------------------------------------------------------------------------- */
 .boot {
   position: fixed;
   inset: 0;
@@ -1353,7 +1170,6 @@ html[data-boot="warm"] .boot {
   display: none;
 }
 
-/* Aligned to the same content edge as the masthead's wordmark */
 .boot__inner {
   width: 100%;
   max-width: calc(var(--container) - 2 * var(--gutter));
@@ -1373,7 +1189,6 @@ html[data-boot="warm"] .boot {
   background: var(--line);
 }
 
-/* The bar scales instead of resizing: compositor only, no layout */
 .boot__bar {
   display: block;
   width: 100%;
@@ -1384,16 +1199,6 @@ html[data-boot="warm"] .boot {
   transition: transform var(--t-base) var(--ease-heavy);
 }
 
-/* --------------------------------------------------------------------------
-   11. Stage: one fixed WebGL canvas owns the page background. It paints the
-       page's chapter ground (stone on light pages, petrol on dark ones)
-       under the formation named by <body data-page>, so the DOM stays
-       transparent and the architecture reads through. Its two walls are
-       fitted to the canyon column on every resize, and it fades in over
-       the identical <html> ground once its first frame is drawn.
-       A WebGL canvas is already its own compositor layer: strict
-       containment keeps it from ever taking part in page layout or paint.
-   -------------------------------------------------------------------------- */
 .stage {
   position: fixed;
   inset: 0;
@@ -1415,8 +1220,6 @@ html[data-webgl="off"] .stage,
   display: none;
 }
 
-/* Static fallback: banks of 1px slats on a 16px pitch, either side of the
-   canyon. The mask clears the same band the stage leaves for the copy. */
 .stage-fallback {
   --edge: max(var(--s-32), calc(50% - var(--canyon) / 2 - var(--s-32)));
   position: fixed;
@@ -1427,7 +1230,6 @@ html[data-webgl="off"] .stage,
   background: repeating-linear-gradient(90deg,
     transparent 0 calc(var(--s-16) - var(--border)),
     color-mix(in srgb, var(--fg) var(--a-08), transparent) calc(var(--s-16) - var(--border)) var(--s-16));
-  /* A mask reads only alpha: any opaque token will do */
   -webkit-mask-image: linear-gradient(90deg, var(--ink) 0, transparent var(--edge), transparent calc(100% - var(--edge)), var(--ink) 100%);
   mask-image: linear-gradient(90deg, var(--ink) 0, transparent var(--edge), transparent calc(100% - var(--edge)), var(--ink) 100%);
 }
@@ -1437,16 +1239,6 @@ html[data-webgl="off"] .stage-fallback,
   display: block;
 }
 
-/* --------------------------------------------------------------------------
-   12. Section scrims, in the section's own ground (--bg). On phones the
-       walls rise behind the edges of the copy, so the scrim is a
-       full-width veil: top, middle and end steps per page. The middle
-       stop sits at 32% of the section, but never further down than 480px,
-       so long reading pages reach full cover right under their page head.
-       From 896px it is a band down the canyon only: it steadies the long
-       shadows under the text and leaves the walls on the periphery
-       untouched. Every step is on the alpha ladder.
-   -------------------------------------------------------------------------- */
 .scrim {
   --veil-top: var(--a-56);
   --veil-mid: var(--a-88);
@@ -1462,21 +1254,16 @@ html[data-webgl="off"] .stage-fallback,
     color-mix(in srgb, var(--bg) var(--veil-end), transparent) 100%);
 }
 
-/* The home page lets more of the monolith through at the top of the band */
 .scrim--hero {
   --veil-end: var(--a-96);
   --band: var(--a-64);
 }
 
-/* Its continuation starts at the veil the hero ends on, and keeps the
-   hero's band, so no seam shows where one section meets the next */
 .scrim--continued {
   --veil-top: var(--a-96);
   --band: var(--a-64);
 }
 
-/* The dark chapter: a heavier veil at the top and in the band, since chalk
-   text on petrol walls needs more separation than ink on stone */
 .scene-dark > .scrim {
   --veil-top: var(--a-64);
   --band: var(--a-80);
@@ -1493,10 +1280,6 @@ html[data-webgl="off"] .stage-fallback,
   }
 }
 
-/* --------------------------------------------------------------------------
-   13. Entrances: one spec. Copy fades in over --t-enter; it never travels,
-       so an anchor jump lands exactly where it points.
-   -------------------------------------------------------------------------- */
 [data-reveal],
 .boot-in {
   opacity: 0;
@@ -1508,7 +1291,6 @@ html[data-booted="true"] .boot-in {
   transition: opacity var(--t-enter) var(--ease);
 }
 
-/* The page head enters in sequence, one stagger step apart */
 html[data-booted="true"] .boot-in:nth-child(2) {
   transition-delay: var(--t-stagger);
 }
@@ -1525,13 +1307,10 @@ html[data-booted="true"] .boot-in:nth-child(5) {
   transition-delay: calc(var(--t-stagger) * 4);
 }
 
-/* A block already on screen when the page boots follows the page head */
 [data-reveal].is-late {
   transition-delay: calc(var(--t-stagger) * 4);
 }
 
-/* Warm pages: the page cross-fade is the entrance. The copy, and any block
-   already on screen, are in place from the first frame. */
 html[data-boot="warm"] .boot-in {
   opacity: 1;
   transition: none;
@@ -1546,11 +1325,6 @@ html[data-boot="warm"] .boot-in {
   opacity: 1;
 }
 
-/* --------------------------------------------------------------------------
-   14. Page transitions: every page shares this stylesheet, so same-origin
-       navigations cross-fade natively where the browser supports it and
-       load as plain pages everywhere else. Off under reduced motion.
-   -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: no-preference) {
   @view-transition {
     navigation: auto;
@@ -1563,9 +1337,6 @@ html[data-boot="warm"] .boot-in {
   animation-timing-function: var(--ease);
 }
 
-/* --------------------------------------------------------------------------
-   15. Reduced motion
-   -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -1588,10 +1359,6 @@ html[data-boot="warm"] .boot-in {
   }
 }
 
-/* --------------------------------------------------------------------------
-   16. Print: the light roles (the dark set is screen-only), no motion, no
-       stage, ink on the paper's own white
-   -------------------------------------------------------------------------- */
 @media print {
   :root,
   .scene-light {
@@ -1634,7 +1401,6 @@ html[data-boot="warm"] .boot-in {
     padding-bottom: var(--s-32);
   }
 
-  /* The two section paddings already make the printed --block-gap */
   .section--continued .chapter:first-child {
     margin-top: 0;
   }
@@ -1649,8 +1415,6 @@ html[data-boot="warm"] .boot-in {
     border: 0;
   }
 
-  /* Outbound links print their address; the split control's hairline is
-     the same pseudo-element, so its screen styling is reset here */
   main a[href^="http"]::after {
     content: " (" attr(href) ")";
     position: static;

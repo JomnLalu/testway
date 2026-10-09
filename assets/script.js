@@ -1,39 +1,12 @@
-/* ==========================================================================
-   jomontolalu.com
-   One script for every page, and one fixed WebGL stage on each: the
-   kinetic data monolith.
-
-   Two walls of matte, stacked blocks line a canyon. The copy sits on the
-   empty floor between them: the canyon is fitted to the text column on
-   every resize, so the architecture frames the content instead of sitting
-   behind it.
-
-   Page          <body data-page> picks the formation the walls are built
-                 in; <html data-chapter>, written in each HTML file, picks the
-                 chapter (stone or petrol ground), before the first frame is
-                 drawn
-   Scroll        the walls travel toward the horizon at a parallax rate
-   Pointer       a raycast onto the crest of the walls drives a topographic
-                 well: blocks under the cursor sink, a ring around them rises
-   Click / tap   a sea green pulse runs outward through the glass slats
-
-   Every moving value is eased with exponential damping (frame-rate
-   independent). The loop sleeps as soon as the architecture has settled.
-   ========================================================================== */
 (function () {
   'use strict';
 
   var root = document.documentElement;
 
-  /* ------------------------------------------------------------------------
-     Utilities. The script uses import(), so every engine that parses it has
-     requestAnimationFrame, performance.now and passive listeners.
-     ------------------------------------------------------------------------ */
   var raf = window.requestAnimationFrame.bind(window);
   var clock = window.performance.now.bind(window.performance);
   var PASSIVE = { passive: true };
 
-  /* Safari before 14 parses import() but has only MediaQueryList.addListener */
   function onMedia(mq, fn) {
     if (mq.addEventListener) mq.addEventListener('change', fn);
     else if (mq.addListener) mq.addListener(fn);
@@ -42,25 +15,20 @@
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
   function wrap(v, p) { return v - p * Math.floor(v / p); }
 
-  /* Exponential damping: identical feel at 30, 60 or 120 fps. */
   function damp(current, target, lambda, dt) {
     return current + (target - current) * (1 - Math.exp(-lambda * dt));
   }
 
-  /* Design tokens, read from the stylesheet (it blocks this deferred script,
-     so it has always loaded by now): one source for colour and timing. */
   var tokens = window.getComputedStyle(root);
   function token(name) { return tokens.getPropertyValue(name).trim(); }
   function ms(name) { return parseFloat(token(name)) || 0; }
   function hex(name) { return parseInt(token(name).slice(1), 16); }
 
   var reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-  /* The stylesheet's narrow breakpoint */
   var narrowQuery = window.matchMedia('(width < 896px)');
   var reduced = reducedQuery.matches;
   var coarse = window.matchMedia('(pointer: coarse)').matches;
 
-  /* The only colours the scene may use: the brand tokens */
   var PALETTE = {
     stone: hex('--stone'),
     petrol: hex('--petrol'),
@@ -73,30 +41,20 @@
     return window.pageYOffset || root.scrollTop || 0;
   }
 
-  /* ------------------------------------------------------------------------
-     Pages: <body data-page> names the page and picks its formation. The
-     chapter (stone or petrol ground) is read from <html data-chapter>, the
-     one place each HTML file declares it, so the first paint is right
-     before this script runs.
-
-     Formations are in height modules. The two columns on the canyon edge
-     form a clean cliff; rise and noise build the mass behind it. Every `bay`
-     rows the wall opens and a glass slat stands in the gap.
-     ------------------------------------------------------------------------ */
   var PAGES = {
-    home: {           /* the monolith */
+    home: {
       formation: { base: 10, rise: 1, noise: 8, bay: 6, depth: 0.9 }
     },
-    about: {          /* terraces */
+    about: {
       formation: { base: 6, rise: 2, noise: 0, bay: 8, depth: 0.9 }
     },
-    capabilities: {   /* four-block bays */
+    capabilities: {
       formation: { base: 6, rise: 1, noise: 0, bay: 5, depth: 0.9, zig: 2 }
     },
-    work: {           /* data slats */
+    work: {
       formation: { base: 4, rise: 1, noise: 0, bay: 4, depth: 0.42, wave: 8 }
     },
-    contact: {        /* the monolith settles */
+    contact: {
       formation: { base: 3, rise: 1, noise: 3, bay: 9, depth: 0.9 }
     }
   };
@@ -104,9 +62,6 @@
   var page = PAGES[document.body.getAttribute('data-page')] || PAGES.home;
   var dark = root.getAttribute('data-chapter') === 'dark';
 
-  /* ------------------------------------------------------------------------
-     Frame-batched scroll and resize subscribers
-     ------------------------------------------------------------------------ */
   var scrollSubs = [];
   var resizeSubs = [];
   var scrollQueued = false;
@@ -148,12 +103,6 @@
     new ResizeObserver(queueResize).observe(document.body);
   }
 
-  /* ------------------------------------------------------------------------
-     Boot overlay: waits for fonts and the first rendered frame, once per
-     visit. Every later page opens warm (the inline script in each <head>
-     reads BOOT_KEY): no overlay, the copy is in place from the first frame
-     and the stage fades in when its first frame is ready.
-     ------------------------------------------------------------------------ */
   var BOOT_KEY = 'jm:booted';
   var warm = root.getAttribute('data-boot') === 'warm';
 
@@ -167,7 +116,6 @@
     var booted = false;
     var queue = [];
 
-    /* The bar scales instead of resizing: compositor only, no layout */
     function paint() {
       if (bar) bar.style.transform = 'scaleX(' + (done / total) + ')';
     }
@@ -176,9 +124,6 @@
       booted = true;
       if (el) el.setAttribute('data-done', 'true');
       root.setAttribute('data-booted', 'true');
-      /* The head script falls back to no-js if this file is slow or fails;
-         a late boot takes the page back. Blocks the fallback was showing
-         stay shown, wherever the reader has scrolled. */
       if (root.classList.contains('no-js')) {
         Array.prototype.forEach.call(document.querySelectorAll('[data-reveal]'), function (item) {
           item.classList.add('is-in', 'is-instant');
@@ -191,14 +136,13 @@
     function finish() {
       if (finished) return;
       finished = true;
-      try { window.sessionStorage.setItem(BOOT_KEY, '1'); } catch (err) { /* storage blocked: every page boots cold */ }
+      try { window.sessionStorage.setItem(BOOT_KEY, '1'); } catch (err) { }
       if (warm) {
         release();
         return;
       }
       if (bar) bar.style.transform = 'scaleX(1)';
       if (label) label.textContent = 'Ready';
-      /* Lift the overlay once the bar's last step has landed */
       window.setTimeout(release, reduced ? 0 : ms('--t-base'));
     }
 
@@ -215,7 +159,6 @@
         paint();
         if (done >= total) finish();
       },
-      /* Runs fn once the overlay has lifted (at once if it already has) */
       ready: function (fn) {
         if (booted) fn();
         else queue.push(fn);
@@ -229,11 +172,6 @@
     boot.step();
   }
 
-  /* ------------------------------------------------------------------------
-     Chrome: menu and scrolled state. The chapter and the current page
-     (aria-current="page") are written in each HTML file, so they need no
-     script.
-     ------------------------------------------------------------------------ */
   (function chrome() {
     var masthead = document.getElementById('masthead');
     var toggle = document.getElementById('menuToggle');
@@ -261,10 +199,6 @@
       }
     });
 
-    /* A tap outside the open menu only closes it: it never reaches the
-       stage's pulse (registered later on the same target). The state is read
-       at the press, because the press moves focus out of the masthead and
-       the focusout handler below has closed the menu before the click. */
     var openAtPress = false;
 
     document.addEventListener('pointerdown', function () {
@@ -279,7 +213,6 @@
       e.stopImmediatePropagation();
     });
 
-    /* Tabbing out of the open menu closes it, so it never hangs over the page */
     masthead.addEventListener('focusout', function (e) {
       if (masthead.getAttribute('data-open') !== 'true') return;
       if (e.relatedTarget && !masthead.contains(e.relatedTarget)) setMenu(false);
@@ -302,10 +235,6 @@
     onScrollFrame(readScroll);
   })();
 
-  /* ------------------------------------------------------------------------
-     Reveal on scroll. Starts once the boot overlay lifts, so the first
-     screen of every page enters in view rather than behind the overlay.
-     ------------------------------------------------------------------------ */
   boot.ready(function reveal() {
     var items = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
     if (!items.length) return;
@@ -315,9 +244,6 @@
       return;
     }
 
-    /* Blocks already on screen at boot belong to the opening: on a cold
-       boot they follow the page head's stagger, on a warm page they are in
-       place from the first frame, like the page head itself */
     var opening = true;
 
     var io = new IntersectionObserver(function (entries) {
@@ -328,33 +254,24 @@
         io.unobserve(entry.target);
       });
       opening = false;
-    /* Threshold 0: a chapter much taller than the screen (the MangARTI case
-       study) can never show 8% of itself at once, so any ratio would strand it */
     }, { rootMargin: '0px 0px -12% 0px', threshold: 0 });
 
     items.forEach(function (el) { io.observe(el); });
   });
 
-  /* ------------------------------------------------------------------------
-     Copy email control
-     ------------------------------------------------------------------------ */
   (function copyControl() {
     var btn = document.getElementById('copyEmail');
     var status = document.getElementById('copyStatus');
     if (!btn) return;
 
     var address = btn.getAttribute('data-copy');
-    /* How long the confirmation stays up: reading time, not motion */
     var DONE_HOLD = 2800;
     var busy = false;
     var slowTimer = null;
     var resetTimer = null;
 
-    /* The markup ships the button hidden: without script it could not copy */
     btn.hidden = false;
 
-    /* The labels live in the markup; a state only picks which one shows.
-       aria-disabled, not disabled: a disabled button loses keyboard focus. */
     function setState(state, message) {
       btn.setAttribute('data-state', state);
       btn.setAttribute('aria-disabled', state === 'working' ? 'true' : 'false');
@@ -383,7 +300,6 @@
       var ok = false;
       try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
       document.body.removeChild(input);
-      /* select() moved focus to the temporary input: hand it back */
       if (active && active.focus) active.focus({ preventScroll: true });
       return ok;
     }
@@ -393,8 +309,6 @@
       busy = true;
       window.clearTimeout(resetTimer);
       if (status) status.textContent = '';
-      /* The spinner shows only if the clipboard is slow: a copy that lands
-         within one --t-base step goes straight to its result, no flash */
       slowTimer = window.setTimeout(function () { setState('working', ''); }, ms('--t-base'));
 
       var task = (navigator.clipboard && navigator.clipboard.writeText)
@@ -409,10 +323,6 @@
     });
   })();
 
-  /* ------------------------------------------------------------------------
-     Stage
-     ------------------------------------------------------------------------ */
-  /* Same build from two CDNs: the second is only tried if the first fails */
   var THREE_URLS = [
     'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.min.js',
     'https://unpkg.com/three@0.185.1/build/three.module.min.js'
@@ -428,7 +338,6 @@
   (function stage() {
     var canvas = document.getElementById('stage');
 
-    /* Falls back to the static slats, and says why in the console */
     function unavailable(reason) {
       root.setAttribute('data-webgl', 'off');
       if (window.console && console.warn) {
@@ -442,7 +351,6 @@
       return;
     }
 
-    /* A colour that failed to read (stylesheet missing) would paint black */
     for (var name in PALETTE) {
       if (isNaN(PALETTE[name])) {
         unavailable('The brand tokens could not be read from the stylesheet.');
@@ -473,38 +381,29 @@
         return;
       }
 
-      /* ---- Dimensions --------------------------------------------------------
-         One plan cell is one world unit. Blocks stack in height modules.
-      ---------------------------------------------------------------------------- */
       var DEG = Math.PI / 180;
       var CELL = 1;
       var MODULE = 0.5;
-      var JOINT = 1;            /* a visible joint every two modules: stacked cubes */
-      var MAX_COLS = 40;        /* per wall: enough for a 32:9 monitor */
+      var JOINT = 1;
+      var MAX_COLS = 40;
       var MAX_ROWS = 72;
       var COUNT = MAX_ROWS * MAX_COLS * 2;
-      var live = 0;             /* slots in use: packed densely from index 0 */
-      var MAX_H = 14;           /* tallest block, pointer rim included */
-      var TALLEST = 24;         /* tallest profile, in modules: leaves room for the rim */
-      var MATTE_W = 0.9;        /* footprint across the wall, as a fraction of a cell */
+      var live = 0;
+      var MAX_H = 14;
+      var TALLEST = 24;
+      var MATTE_W = 0.9;
       var GLASS_W = 0.98;
-      var GLASS_D = 0.24;       /* glass slats are thin along the canyon */
-      var GLASS_RISE = 4;       /* modules a slat stands proud of its bay */
+      var GLASS_D = 0.24;
+      var GLASS_RISE = 4;
 
-      /* Lenses. Landscape screens look down the canyon at a moderate angle,
-         close enough that the walls lean out of frame and converge toward the
-         far end. Portrait screens keep the horizontal field of a square frame
-         from higher up, so a phone sees the same canyon rather than a
-         telephoto crop of it. */
       var LENS_WIDE = { fov: 34, tilt: 50 * DEG, dist: 32 };
       var LENS_TALL = { fov: 22, tilt: 58 * DEG, dist: 48 };
       var LENS = LENS_WIDE;
-      var FIT_Y = 0.55;         /* NDC height at which the wall base meets the column edge */
-      var MARGIN_PX = 48;       /* air between the copy and the foot of each wall */
-      var NARROW_EDGE = 0.8;    /* on phones the walls rise from the outer edges */
-      var PARALLAX = 0.42;      /* floor speed at mid screen, relative to the page */
+      var FIT_Y = 0.55;
+      var MARGIN_PX = 48;
+      var NARROW_EDGE = 0.8;
+      var PARALLAX = 0.42;
 
-      /* Motion constants: exponential damping rates, per second */
       var TRAVEL_RATE = 7;
       var SWAY_RATE = 2.6;
       var HEIGHT_RATE = 9;
@@ -512,13 +411,10 @@
       var WELL_FOLLOW = 14;
       var PULSE_RATE = 16;
 
-      /* Proximity well: a Ricker profile. The centre sinks by WELL_DEPTH,
-         a ring at 1.73 sigma rises by 45% of that. */
       var CREST_Y = 4;
       var WELL_SIGMA = 1.8;
       var WELL_DEPTH = 5 * MODULE;
 
-      /* Click pulse: the front eases out to RIPPLE_REACH while its energy decays */
       var RIPPLE_REACH = 48;
       var RIPPLE_SPEED = 1.2;
       var RIPPLE_FADE = 0.9;
@@ -526,14 +422,12 @@
       var RIPPLE_KICK = 1.2 * MODULE;
       var MAX_RIPPLES = 4;
 
-      /* The whole canyon is built in this page's formation (see PAGES), from
-         the very first frame: nothing about it depends on scroll depth. */
       var FORMATION = page.formation;
       var DEPTH = FORMATION.depth * CELL;
       var CLIFF = 2;
 
       var maxDpr = coarse ? 1.5 : 2;
-      var MAX_PIXELS = 6e6;     /* drawing buffer budget: keeps 4K and 5K screens in GPU memory */
+      var MAX_PIXELS = 6e6;
 
       function pixelRatio() {
         var dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
@@ -548,9 +442,7 @@
       renderer.toneMappingExposure = 1;
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFShadowMap;
-      /* The light never moves: the shadow map is redrawn only when blocks do */
       renderer.shadowMap.autoUpdate = false;
-      /* Refraction is blurred by roughness anyway: sample it at reduced size */
       renderer.transmissionResolutionScale = coarse ? 0.5 : 0.75;
 
       var scene = new THREE.Scene();
@@ -572,14 +464,9 @@
         uPulse: { value: new THREE.Color(PALETTE.seaLight).multiplyScalar(1.6) },
         uPulseFilter: { value: new THREE.Color(PALETTE.seaLight) }
       };
-      /* The filter keeps the hue of sea green at full brightness */
       var sea = uniforms.uPulseFilter.value;
       sea.multiplyScalar(1 / Math.max(sea.r, sea.g, sea.b));
 
-      /* ---- Backdrop: the page's chapter ground; unlit, exact ----------------
-         Drawn as a mesh rather than left to the clear colour, so the glass
-         refracts the same ground in the transmission pass. uDark is fixed
-         per page: 0 on stone, 1 on petrol. */
       var backdrop = new THREE.Mesh(
         new THREE.PlaneGeometry(2, 2),
         new THREE.ShaderMaterial({
@@ -610,9 +497,6 @@
       backdrop.renderOrder = -10;
       scene.add(backdrop);
 
-      /* ---- Light: a low, hard key from the far end of the canyon -----------
-         Shadows run along the walls, stepping across the tops of the blocks
-         in front, instead of across the floor under the copy. */
       var LIGHT_DIR = new THREE.Vector3(-0.14, 0.44, -0.89).normalize();
 
       var key = new THREE.DirectionalLight(PALETTE.chalk, 4.5);
@@ -626,10 +510,6 @@
 
       scene.add(new THREE.HemisphereLight(PALETTE.chalk, PALETTE.petrol, 1.5));
 
-      /* ---- Studio environment, for the glass only ----------------------------
-         A petrol room with chalk softboxes and one sea green line: the glass
-         reflects nothing that is not in the palette.
-      ---------------------------------------------------------------------------- */
       function studio() {
         var room = new THREE.Scene();
         var parts = [];
@@ -643,9 +523,6 @@
           parts.push(geo, mat);
         }
 
-        /* The slats are seen from above and in front: their faces mirror the
-           lower half of the room behind the camera, their crests the upper
-           half toward the key light. */
         add(new THREE.BoxGeometry(30, 16, 30), tone(PALETTE.petrol, PALETTE.chalk, 0.16), 0, 2, 0, THREE.BackSide);
         add(new THREE.PlaneGeometry(12, 5), new THREE.Color(PALETTE.chalk).multiplyScalar(3.2), -3, 9, -12);
         add(new THREE.PlaneGeometry(26, 3), new THREE.Color(PALETTE.chalk).multiplyScalar(1.6), 0, -4, 13);
@@ -658,12 +535,6 @@
         return texture;
       }
 
-      /* ---- Materials ----------------------------------------------------------- */
-
-      /* Matte structure: heavy stone on the light chapter, lifted petrol on the
-         dark one, with hairline edges and module joints measured from the top,
-         so a block that sinks loses modules into the floor. */
-      /* The shader below replaces the base colour; stone documents the intent */
       var matteMat = new THREE.MeshStandardMaterial({ color: PALETTE.stone, roughness: 0.94, metalness: 0 });
       matteMat.onBeforeCompile = function (shader) {
         shader.uniforms.uDark = uniforms.uDark;
@@ -723,9 +594,6 @@
           ].join('\n'));
       };
 
-      /* Liquid glass: one refraction bounce (front faces only, so the renderer
-         never adds a back-face transmission pass), slight roughness, a thin
-         sea green body tint like the edge of float glass. */
       var glassMat = new THREE.MeshPhysicalMaterial({
         color: PALETTE.chalk,
         metalness: 0,
@@ -740,9 +608,6 @@
         envMapIntensity: 1,
         side: THREE.FrontSide
       });
-      /* The click pulse is sea green light carried by the glass. On petrol it
-         is pure emission; on stone, where added light would wash out to white,
-         the slat also filters what it transmits toward the same hue. */
       glassMat.onBeforeCompile = function (shader) {
         shader.uniforms.uDark = uniforms.uDark;
         shader.uniforms.uPulse = uniforms.uPulse;
@@ -773,12 +638,8 @@
           ].join('\n'));
       };
 
-      /* ---- Instanced walls ------------------------------------------------------
-         Every slot (row, side, column) owns one matte and one glass instance;
-         whichever is not in use sits at zero scale.
-      ---------------------------------------------------------------------------- */
       var matteGeo = new THREE.BoxGeometry(1, 1, 1);
-      matteGeo.translate(0, 0.5, 0); /* base on the floor, grows upward */
+      matteGeo.translate(0, 0.5, 0);
       var glassGeo = matteGeo.clone();
 
       var pulseArr = new Float32Array(COUNT);
@@ -796,13 +657,11 @@
       matte.castShadow = true;
       matte.receiveShadow = true;
 
-      /* Per-slot state */
       var height = new Float32Array(COUNT);
       var base = new Float32Array(COUNT);
       var glassy = new Uint8Array(COUNT);
       var rowOf = new Int32Array(COUNT);
 
-      /* Shadow catcher: the floor is the exact backdrop colour, only darker in shadow */
       var ground = new THREE.Mesh(
         new THREE.PlaneGeometry(1, 1),
         new THREE.ShadowMaterial({ color: PALETTE.ink, opacity: 0.16 })
@@ -811,7 +670,6 @@
       ground.receiveShadow = true;
       scene.add(ground);
 
-      /* ---- Deterministic noise -------------------------------------------------- */
       function hash(n) {
         var s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
         return s - Math.floor(s);
@@ -824,11 +682,8 @@
         return hash(i) + (hash(i + 1) - hash(i)) * f;
       }
 
-      /* ---- Layout: fit the canyon to the copy ----------------------------------- */
-      /* w, h, dpr: the size the buffer and camera were built for.
-         cssH: the canvas height on screen now, refreshed on every resize. */
       var view = { w: 1, h: 1, dpr: 1, cssH: 1 };
-      var canyon = 6;            /* half width of the empty floor */
+      var canyon = 6;
       var zFar = -40;
       var period = 60;
       var rows = 60;
@@ -864,8 +719,6 @@
         camera.updateMatrixWorld();
       }
 
-      /* Right edge of the copy column plus a margin, in NDC. Every page sets
-         its copy in the same canyon container, so the first one will do. */
       function columnEdge() {
         var ref = document.querySelector('main .container');
         var half = view.w / 2;
@@ -915,8 +768,6 @@
         ground.position.set(0, 0, (zFar + zNear) / 2);
       }
 
-      /* On touch screens the browser toolbar changes the height while
-         scrolling: within this slack the buffer is kept and simply scaled. */
       var HEIGHT_SLACK = coarse ? 160 : 0;
 
       function viewportChanged() {
@@ -940,29 +791,22 @@
         camera.updateProjectionMatrix();
         placeCamera(0, 0);
 
-        /* The foot of each wall meets the column edge at FIT_Y */
         if (cast(columnEdge(), FIT_Y, floorPlane, hit)) canyon = Math.max(hit.x, CELL);
 
-        /* Rows: from past the top edge of the frame to where the tallest block
-           would still reach up into the bottom edge. Margins cover the sway. */
         var far = cast(0, 1.08, floorPlane, hit) ? hit.z : -80;
         var near = cast(0, -1.08, roofPlane, hit) ? hit.z : 20;
         rows = Math.min(MAX_ROWS, Math.ceil((near - far + 6) / CELL));
         period = rows * CELL;
         zFar = near + 3 - period;
 
-        /* Columns: out past the far corner of the frame */
         var reach = cast(1.08, 1.08, floorPlane, hit) ? hit.x : canyon + MAX_COLS;
         cols = clamp(Math.ceil((reach - canyon) / CELL) + 2, 3, MAX_COLS);
 
-        /* Travel: the floor at mid screen moves at PARALLAX times page speed */
         probeA.set(0, 0, 0).project(camera);
         probeB.set(0, 0, -CELL).project(camera);
         var pxPerUnit = Math.max(Math.abs(probeB.y - probeA.y) * view.h / 2, 1e-3);
         travelPerPx = PARALLAX / pxPerUnit;
 
-        /* Slots are packed by (row, side, column) for the current column count:
-           reset them all, then only the live range is drawn and uploaded. */
         matte.instanceMatrix.array.fill(0);
         glass.instanceMatrix.array.fill(0);
         pulseArr.fill(0);
@@ -976,7 +820,6 @@
         renderer.shadowMap.needsUpdate = true;
       }
 
-      /* ---- Profiles ------------------------------------------------------------- */
       function profileAt(g, side, c, i) {
         var P = FORMATION;
         var bay = wrap(g, P.bay);
@@ -994,7 +837,6 @@
         glassy[i] = isGlass ? 1 : 0;
       }
 
-      /* ---- Interaction state ---------------------------------------------------- */
       var travel = 0;
       var pointer = { nx: 0, ny: 0, inside: false };
       var sway = { x: 0, y: 0 };
@@ -1027,9 +869,6 @@
         a[o + 12] = x; a[o + 13] = 0; a[o + 14] = z; a[o + 15] = 1;
       }
 
-      /* Walk every live slot: wrap rows along the canyon, resolve the profile of
-         rows that just came round, add the pointer well and click rings, then
-         ease each block toward its target height. Returns true while moving. */
       function layBlocks(dt, still) {
         var mA = matte.instanceMatrix.array;
         var gA = glass.instanceMatrix.array;
@@ -1099,18 +938,15 @@
         return busy;
       }
 
-      /* ---- Frame ------------------------------------------------------------------ */
       function paint(dt, snap) {
         var still = snap || reduced;
         var busy = false;
 
-        /* Travel along the canyon with the page */
         var goal = reduced ? 0 : travelPerPx * scrollY();
         travel = still ? goal : damp(travel, goal, TRAVEL_RATE, dt);
         if (Math.abs(goal - travel) > 1e-4) busy = true;
         else travel = goal;
 
-        /* A slight lens sway toward the pointer */
         var tracking = pointer.inside && !reduced;
         var aimX = tracking ? pointer.nx : 0;
         var aimY = tracking ? pointer.ny : 0;
@@ -1119,7 +955,6 @@
         if (Math.abs(aimX - sway.x) + Math.abs(aimY - sway.y) > 1e-4) busy = true;
         placeCamera(sway.x, sway.y);
 
-        /* Proximity: raycast the cursor onto the crest of the walls */
         var want = 0;
         if (tracking && cast(pointer.nx, -pointer.ny, crestPlane, hit)) {
           want = 1;
@@ -1136,7 +971,6 @@
         well.amt = still ? want : damp(well.amt, want, WELL_RATE, dt);
         if (Math.abs(want - well.amt) > 1e-3 || Math.abs(well.tx - well.x) + Math.abs(well.tz - well.z) > 1e-3) busy = true;
 
-        /* Click rings: the front eases out, the energy decays */
         for (var n = ripples.length - 1; n >= 0; n--) {
           var rp = ripples[n];
           rp.radius = damp(rp.radius, RIPPLE_REACH, RIPPLE_SPEED, dt);
@@ -1146,8 +980,6 @@
         }
         if (ripples.length) busy = true;
 
-        /* Blocks: walked only when something that shapes them changed. A frame
-           that only sways the lens reuses the instance buffers and shadow map. */
         var shaped = still || dirty || blocksBusy || ripples.length > 0 ||
           travel !== drawn.travel || well.amt !== drawn.amt ||
           (well.amt > 0.002 && (well.x !== drawn.x || well.z !== drawn.z));
@@ -1165,7 +997,6 @@
         return busy;
       }
 
-      /* ---- Loop: runs only while something is still settling ------------------------ */
       var blocksBusy = true;
       var drawn = { travel: NaN, amt: NaN, x: NaN, z: NaN };
       var running = false;
@@ -1209,10 +1040,6 @@
       root.setAttribute('data-webgl', 'on');
       boot.step();
 
-      /* ---- Events -------------------------------------------------------------------- */
-      /* The body observer also lands here when only the document reflows
-         (fonts, content): the formation does not depend on the document, so
-         the frame is untouched. Buffers are rebuilt for real viewport changes. */
       onResizeFrame(function () {
         view.cssH = canvas.clientHeight || window.innerHeight;
         if (viewportChanged()) {
@@ -1247,8 +1074,6 @@
         });
       }
 
-      /* A click on the page itself (not on a control, not on the masthead)
-         sends a pulse */
       var CONTROLS = 'a, button, input, select, textarea, label, summary, [role="button"], #masthead';
       document.addEventListener('click', function (e) {
         if (reduced || e.button !== 0 || e.detail === 0) return;
@@ -1281,7 +1106,6 @@
 
       canvas.addEventListener('webglcontextrestored', function () {
         lost = false;
-        /* The environment lives in a render target: its pixels did not survive */
         var stale = glassMat.envMap;
         glassMat.envMap = studio();
         if (stale) stale.dispose();
@@ -1291,11 +1115,10 @@
         play();
       });
 
-      /* Keep the renderer when the page goes into the back/forward cache */
       window.addEventListener('pagehide', function (e) {
         pause();
         if (e.persisted) return;
-        try { renderer.dispose(); } catch (err) { /* already released */ }
+        try { renderer.dispose(); } catch (err) { }
       });
 
       window.addEventListener('pageshow', function (e) {
