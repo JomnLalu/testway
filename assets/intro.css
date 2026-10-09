@@ -1,0 +1,124 @@
+/* Homepage intro, injected by assets/intro.js. Built on the tokens in style.css.
+   To remove the intro: delete this file, intro.js and its <script> tag in index.html. */
+
+:root {
+  --z-intro: 50;
+}
+
+/* While the intro plays the page underneath must not scroll. The stable gutter keeps the
+   page from reflowing, so the wordmark the intro lands on stays where it was measured. */
+html.is-intro {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+/* The reserved gutter shows the root background: keep it in the scene's colour */
+html.is-intro-dark {
+  background-color: var(--petrol);
+}
+
+/* The intro draws the wordmark itself until it has landed on it */
+html.is-intro-wordmark .wordmark {
+  visibility: hidden;
+}
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-intro);
+  background: var(--stone);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.intro[data-phase="entering"] {
+  opacity: 0;
+}
+
+.intro[data-phase="playing"] {
+  transition: opacity var(--t-base) var(--ease);
+}
+
+/* The landing clears the canvas module by module; the page must show through */
+.intro[data-phase="landing"] {
+  background: transparent;
+}
+
+.intro[data-phase="leaving"] {
+  opacity: 0;
+  transition: opacity var(--t-base) var(--ease);
+}
+
+.intro__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.intro__controls {
+  position: absolute;
+  right: calc(var(--gutter) + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--gutter) + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  gap: var(--s-12);
+  transition: opacity var(--t-base) var(--ease);
+}
+
+.intro[data-phase="landing"] .intro__controls {
+  opacity: 0;
+}
+
+.intro__level {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  flex: none;
+  fill: currentColor;
+}
+
+.intro__level rect {
+  transform-box: fill-box;
+  transform-origin: bottom;
+}
+
+.intro__level rect:nth-child(1) {
+  fill: color-mix(in srgb, currentColor var(--a-40), transparent);
+  transform: scaleY(var(--level-1, 1));
+}
+
+.intro__level rect:nth-child(2) {
+  fill: color-mix(in srgb, currentColor var(--a-72), transparent);
+  transform: scaleY(var(--level-2, 1));
+}
+
+.intro__level rect:nth-child(3) {
+  transform: scaleY(var(--level-3, 1));
+}
+
+.intro-footnote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-4) var(--s-12);
+  margin-top: var(--s-24);
+  font-family: var(--font-display);
+  font-size: var(--size-xs);
+  font-weight: 500;
+  line-height: var(--lh-body);
+}
+
+.intro-footnote__replay {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+@media print {
+  .intro,
+  .intro-footnote__replay {
+    display: none !important;
+  }
+}
