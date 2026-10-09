@@ -506,12 +506,26 @@ main {
   padding-bottom: var(--section-y);
 }
 
-/* The home page: one screen, with the copy resting on its floor */
+/* The home page: one screen, with the copy resting on its floor. The track
+   may shrink below its longest word, so enlarged text spacing wraps the
+   headline instead of widening the page. */
 .section--hero {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: end;
   min-height: 100vh;
   min-height: 100svh;
+}
+
+/* The home page continues under its first screen with a summary of every
+   page. It is one surface with the hero: no second masthead offset, and its
+   first hairline sits where the hero's bottom padding ends. */
+.section--continued {
+  padding-top: 0;
+}
+
+.section--continued .chapter:first-child {
+  margin-top: 0;
 }
 
 .container {
@@ -975,6 +989,7 @@ code {
 
 .row__meta {
   color: var(--fg-mid);
+  text-wrap: pretty;
 }
 
 /* Two lists stacked in one block are separate groups, not one long list */
@@ -1445,6 +1460,13 @@ html[data-webgl="off"] .stage-fallback,
 /* The home page lets more of the monolith through at the top of the band */
 .scrim--hero {
   --veil-end: var(--a-96);
+  --band: var(--a-64);
+}
+
+/* Its continuation starts at the veil the hero ends on, and keeps the
+   hero's band, so no seam shows where one section meets the next */
+.scrim--continued {
+  --veil-top: var(--a-96);
   --band: var(--a-64);
 }
 

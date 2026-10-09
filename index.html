@@ -49,7 +49,7 @@
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.min.js">
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.core.min.js">
 
-  <link rel="stylesheet" href="assets/style.css?v=2026-10-06">
+  <link rel="stylesheet" href="assets/style.css?v=2026-10-09">
 
   <!-- Before first paint. The boot overlay plays once per visit: assets/script.js
        stores 'jm:booted' after the first page boots, and every later page
@@ -87,11 +87,17 @@
         "name": "Jonathan Montolalu | AI & data science engineer, Indonesia",
         "description": "Jonathan Immanuel Montolalu is an independent AI and data science engineer in Indonesia. He fine-tunes language models (MangARTI) and builds small web tools that other people use (IterMath, BSQShuttle).",
         "inLanguage": "en-GB",
-        "dateModified": "2026-10-06",
+        "dateModified": "2026-10-09",
         "isPartOf": { "@id": "https://jomontolalu.com/#website" },
         "about": { "@id": "https://jomontolalu.com/#person" },
         "mainEntity": { "@id": "https://jomontolalu.com/#person" },
-        "primaryImageOfPage": { "@id": "https://jomontolalu.com/#primaryimage" }
+        "primaryImageOfPage": { "@id": "https://jomontolalu.com/#primaryimage" },
+        "mentions": [
+          { "@id": "https://jomontolalu.com/work.html#mangarti" },
+          { "@id": "https://jomontolalu.com/work.html#itermath" },
+          { "@id": "https://jomontolalu.com/work.html#bsqshuttle" },
+          { "@id": "https://jomontolalu.com/#rexmundi" }
+        ]
       },
       {
         "@type": "ImageObject",
@@ -136,6 +142,39 @@
         ]
       },
       {
+        "@type": "SoftwareSourceCode",
+        "@id": "https://jomontolalu.com/work.html#mangarti",
+        "name": "MangARTI",
+        "url": "https://huggingface.co/Jmnlalu/MangARTI",
+        "codeRepository": "https://github.com/JomnLalu/MangARTI",
+        "description": "A QLoRA fine-tune of Llama 3 8B Instruct that translates between formal Bahasa Indonesia and Manado Malay in both directions, trained on a dataset written with native speakers.",
+        "programmingLanguage": "Python",
+        "author": { "@id": "https://jomontolalu.com/#person" },
+        "subjectOf": { "@id": "https://jomontolalu.com/work.html#webpage" }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://jomontolalu.com/work.html#itermath",
+        "name": "IterMath",
+        "url": "https://itermath.jomontolalu.com",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web browser",
+        "description": "A practice tool for core math skills: seven modules from addition to permutations, each generating new problems and showing the solution after every wrong answer.",
+        "author": { "@id": "https://jomontolalu.com/#person" },
+        "subjectOf": { "@id": "https://jomontolalu.com/work.html#webpage" }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://jomontolalu.com/work.html#bsqshuttle",
+        "name": "BSQShuttle",
+        "url": "https://bsqshuttle.jomontolalu.com",
+        "applicationCategory": "TravelApplication",
+        "operatingSystem": "Web browser",
+        "description": "An unofficial timetable for the Binus Square shuttle bus, showing departure and arrival times across the Kemanggisan, Alam Sutera and JWC/FX routes.",
+        "author": { "@id": "https://jomontolalu.com/#person" },
+        "subjectOf": { "@id": "https://jomontolalu.com/work.html#webpage" }
+      },
+      {
         "@type": "Organization",
         "@id": "https://jomontolalu.com/#rexmundi",
         "name": "Rex Mundi Coding Club",
@@ -150,6 +189,10 @@
 </head>
 <body data-page="home">
   <a class="skip" href="#main">Skip to content</a>
+
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-arrow" viewBox="0 0 16 16"><path d="M4.5 11.5L11.5 4.5M5.5 4.5H11.5V10.5"></path></symbol>
+  </svg>
 
   <div class="boot" id="boot" aria-hidden="true">
     <div class="boot__inner">
@@ -214,6 +257,168 @@
       </div>
     </section>
 
+    <!-- Under the first screen: a summary of every page, each linking to the full version -->
+    <div class="section section--continued scene-light">
+      <div class="scrim scrim--continued" aria-hidden="true"></div>
+      <div class="container">
+
+        <section class="chapter" id="about-summary" aria-labelledby="about-summary-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">About</p>
+            <h2 class="t-h2" id="about-summary-title">I train the model and build the tool around it</h2>
+            <p class="t-lead t-quiet">
+              Most AI work splits into people who train models and people who ship software. I do
+              both, because the projects I care about are too small to hand off.
+            </p>
+            <div class="actions">
+              <a class="btn btn--ghost" href="about.html">More about me</a>
+            </div>
+          </header>
+          <dl class="facts">
+            <div class="facts__row">
+              <dt class="facts__key">Based in</dt>
+              <dd class="facts__val">Indonesia</dd>
+            </div>
+            <div class="facts__row">
+              <dt class="facts__key">Core focus</dt>
+              <dd class="facts__val">LLM fine-tuning, Python, data science</dd>
+            </div>
+            <div class="facts__row">
+              <dt class="facts__key">Also works in</dt>
+              <dd class="facts__val">Hardware electronics</dd>
+            </div>
+            <div class="facts__row">
+              <dt class="facts__key">Community</dt>
+              <dd class="facts__val">Co-founder, Rex Mundi Coding Club</dd>
+            </div>
+            <div class="facts__row">
+              <dt class="facts__key">Languages</dt>
+              <dd class="facts__val">English, Indonesian</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="chapter" id="capabilities-summary" aria-labelledby="capabilities-summary-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">Capabilities</p>
+            <h2 class="t-h2" id="capabilities-summary-title">What I can take on</h2>
+            <p class="t-lead t-quiet">
+              Four kinds of work, each written up as a method: what I settle first, what decides the
+              result, and where that kind of project usually goes wrong.
+            </p>
+            <div class="actions">
+              <a class="btn btn--ghost" href="capabilities.html">How I work</a>
+            </div>
+          </header>
+          <ul class="rows" role="list">
+            <li>
+              <a class="row" href="capabilities.html#fine-tuning">
+                <span class="row__name">Language model fine-tuning</span>
+                <span class="row__meta">Low-resource languages, narrow domains</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="capabilities.html#python-systems">
+                <span class="row__name">Python systems</span>
+                <span class="row__meta">The software around a model or a data source</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="capabilities.html#data-science">
+                <span class="row__name">Data science</span>
+                <span class="row__meta">Collection, cleaning, analysis</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="capabilities.html#hardware">
+                <span class="row__name">Hardware electronics</span>
+                <span class="row__meta">Work across the software–hardware line</span>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="chapter" id="work-summary" aria-labelledby="work-summary-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">Work</p>
+            <h2 class="t-h2" id="work-summary-title">Selected work</h2>
+            <p class="t-lead t-quiet">
+              Four projects, each in use by someone other than me. MangARTI, a Manadonese translator
+              fine-tuned on one laptop GPU, is written up in full.
+            </p>
+            <div class="actions">
+              <a class="btn btn--ghost" href="work.html">All case studies</a>
+            </div>
+          </header>
+          <ul class="rows" role="list">
+            <li>
+              <a class="row" href="work.html#mangarti">
+                <span class="row__name">MangARTI</span>
+                <span class="row__meta">Llama 3 8B fine-tuned for Manadonese and formal Indonesian</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="work.html#itermath">
+                <span class="row__name">IterMath</span>
+                <span class="row__meta">Math practice that shows the solution to every wrong answer</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="work.html#bsqshuttle">
+                <span class="row__name">BSQShuttle</span>
+                <span class="row__meta">An unofficial timetable for the Binus Square shuttle</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="work.html#rex-mundi">
+                <span class="row__name">Rex Mundi Coding Club</span>
+                <span class="row__meta">A student-led high school coding club</span>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="chapter" id="contact-summary" aria-labelledby="contact-summary-title" data-reveal>
+          <header class="chapter__head flow">
+            <p class="t-kicker">Contact</p>
+            <h2 class="t-h2" id="contact-summary-title">Start with an email</h2>
+            <p class="t-lead t-quiet">
+              Have a project that fits the work on this site, or something to say about it? Email is
+              the fastest way to reach me.
+            </p>
+            <div class="actions">
+              <a class="btn btn--solid" href="mailto:hello@jomontolalu.com">Email hello@jomontolalu.com</a>
+              <a class="btn btn--ghost" href="contact.html">All contact details</a>
+            </div>
+          </header>
+          <ul class="rows" role="list">
+            <li>
+              <a class="row" href="https://github.com/JomnLalu" target="_blank" rel="noopener noreferrer">
+                <span class="row__name">GitHub<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></span>
+                <span class="row__meta">JomnLalu</span>
+                <span class="sr-only"> (opens in a new tab)</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="https://huggingface.co/Jmnlalu" target="_blank" rel="noopener noreferrer">
+                <span class="row__name">Hugging Face<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></span>
+                <span class="row__meta">Jmnlalu</span>
+                <span class="sr-only"> (opens in a new tab)</span>
+              </a>
+            </li>
+            <li>
+              <a class="row" href="https://www.linkedin.com/in/jonathan-immanuel-montolalu-11b43a407" target="_blank" rel="noopener noreferrer">
+                <span class="row__name">LinkedIn<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow"></use></svg></span>
+                <span class="row__meta">Jonathan Immanuel Montolalu</span>
+                <span class="sr-only"> (opens in a new tab)</span>
+              </a>
+            </li>
+          </ul>
+        </section>
+
+      </div>
+    </div>
+
   </main>
 
   <footer class="site-footer scene-dark">
@@ -225,6 +430,6 @@
   </footer>
 
   <!-- Bump ?v= on every release: a stale cached assets/script.js with this page shows only the fallback -->
-  <script src="assets/script.js?v=2026-10-06" defer onerror="document.documentElement.classList.add('no-js')"></script>
+  <script src="assets/script.js?v=2026-10-09" defer onerror="document.documentElement.classList.add('no-js')"></script>
 </body>
 </html>
