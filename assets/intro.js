@@ -11,10 +11,15 @@
   var clock = window.performance.now.bind(window.performance);
 
   var INTRO_KEY = 'jm:intro';
-  // The intro may only cover a page the visitor has not started using: while the site's own
-  // loader is still up, and early enough that a slow download never interrupts reading.
-  var TAKEOVER_MS = 3000;
-  var STALL_MS = 3000;
+  // The longest the page stays behind a plain cover once the site's loader has lifted, while
+  // the intro's stylesheet is still on its way
+  var HOLD_MS = 2000;
+  // On a slow device the page's own 3D stage can hold up every frame for seconds as it starts.
+  // The first gap longer than PAUSE_MS is a pause and the piece carries on where it stopped;
+  // later ones are dropped frames, so a device that is slow throughout still finishes on time.
+  // Only if frames stay away for STALL_MS does the intro give the page back.
+  var PAUSE_MS = 1000;
+  var STALL_MS = 6000;
 
   var markEl = document.querySelector('.wordmark__mark');
   var nameEl = document.querySelector('.wordmark span');
@@ -1251,6 +1256,8 @@
       level: soundButton && soundButton.querySelector('svg'),
       returnFocus: replay ? document.activeElement : null,
       start: null,
+      prevFrame: 0,
+      paused: false,
       lastFrame: clock(),
       hiddenAt: 0,
       phase: replay ? 'entering' : 'playing',
@@ -1279,6 +1286,18 @@
     if (!run) return;
     guard(function () {
       if (run.start === null) run.start = now;
+      var interval = run.prevFrame ? now - run.prevFrame : 0;
+      run.prevFrame = now;
+      if (interval > PAUSE_MS && !run.paused) {
+        run.paused = true;
+        run.start += interval;
+        interval = 0;
+        // Sound queued against the old timing is dropped and picks up from here
+        if (sound) {
+          sound.pause();
+          sound.resume();
+        }
+      }
       if (run.phase === 'entering') setPhase('playing');
       if (run.dirty) {
         run.dirty = false;
@@ -1296,16 +1315,14 @@
         sound.update(t);
         setLevels(sound.level(t));
       }
-      adapt(now, t);
+      adapt(interval, t);
       run.lastFrame = clock();
       raf(frame);
     });
   }
 
   // Measured on the device: if frames keep running long, draw fewer pixels
-  function adapt(now, t) {
-    var interval = now - (run.prevFrame || now);
-    run.prevFrame = now;
+  function adapt(interval, t) {
     if (t < BAR || run.maxDpr <= 1 || (window.devicePixelRatio || 1) <= 1) return;
     run.intervals = run.intervals * 0.9 + interval * 0.1;
     run.slow = run.intervals > 24 ? run.slow + 1 : 0;
@@ -1367,7 +1384,34 @@
 
   // Still on the site's loader: nothing of the page has been shown yet
   function pageUnseen() {
-    return !root.hasAttribute('data-booted') && !root.classList.contains('no-js') && clock() < TAKEOVER_MS;
+    return !root.hasAttribute('data-booted') && !root.classList.contains('no-js');
+  }
+
+  // The stylesheet costs one more round trip, and on a phone the site's loader often lifts
+  // before it arrives. Until then a plain cover in the loader's colour sits just beneath the
+  // loader, so the page stays unseen. It stays at most HOLD_MS past the loader and goes at once
+  // if the site falls back to its static page. Returns its release, which says whether the
+  // cover was still up.
+  function holdPage() {
+    var cover = document.createElement('div');
+    var timer = 0;
+    var watch = new window.MutationObserver(function () {
+      if (root.classList.contains('no-js')) release();
+      else if (root.hasAttribute('data-booted') && !timer) timer = window.setTimeout(release, HOLD_MS);
+    });
+    function release() {
+      var held = !!cover.parentNode;
+      watch.disconnect();
+      window.clearTimeout(timer);
+      if (held) cover.parentNode.removeChild(cover);
+      return held;
+    }
+    cover.className = 'intro-hold';
+    cover.setAttribute('aria-hidden', 'true');
+    cover.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:' + (num(token('--z-boot')) - 1);
+    document.body.insertBefore(cover, document.body.firstChild);
+    watch.observe(root, { attributes: true, attributeFilter: ['class', 'data-booted'] });
+    return release;
   }
 
   function loadStyles(done) {
@@ -1391,9 +1435,12 @@
   }
 
   var store = sessionStore();
-  var autoplay = !!store && !store.getItem(INTRO_KEY) && root.getAttribute('data-boot') !== 'warm' && pageUnseen();
+  var releaseHold = store && !store.getItem(INTRO_KEY) && root.getAttribute('data-boot') !== 'warm' && pageUnseen() ?
+    holdPage() : null;
 
   loadStyles(function (loaded) {
+    // The cover comes down in the same task the intro goes up, so nothing shows between them
+    var autoplay = !!releaseHold && releaseHold();
     C = readPalette();
     FONT = token('--font-display');
     if (!loaded || !C || !FONT) return;
@@ -1418,12 +1465,13 @@
       } else if (run.hiddenAt) {
         if (run.start !== null) run.start += clock() - run.hiddenAt;
         run.hiddenAt = 0;
+        run.prevFrame = 0;
         run.lastFrame = clock();
         if (sound) sound.resume();
       }
     });
 
-    if (autoplay && pageUnseen()) {
+    if (autoplay) {
       guard(function () {
         store.setItem(INTRO_KEY, '1');
         play(false);

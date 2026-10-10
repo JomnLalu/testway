@@ -83,15 +83,27 @@ so they are heard when they are seen. Sound is off by default; nothing audio is 
   masthead wordmark is hidden. All restored on exit. Focus is not moved; Replay returns focus
   to its button and keeps the scroll position.
 - Loads without blocking: one deferred script, which injects its stylesheet. It only takes
-  over while the site’s loader is still up (`data-booted` unset, no `no-js`) and within the
-  first 3 s; otherwise it offers Replay only. Any error, missing token or stylesheet, or
-  stalled frame loop ends the intro and restores the page. Title, meta, JSON-LD and markup are
-  unchanged, so search engines and link previews see the same page.
+  over a page the visitor has not seen: the site’s loader must still be up when the script
+  runs (`data-booted` unset, no `no-js`); otherwise it offers Replay only. The stylesheet costs
+  one more round trip, and on phones the loader often lifts before it arrives, so from the
+  moment the script runs a plain cover in the loader’s colour sits just beneath the loader.
+  It comes down in the same frame the intro goes up. If the stylesheet fails, the cover goes at
+  once; if the stylesheet is still not there 2 s after the loader has lifted, or the site falls
+  back to its static page, the cover goes and the intro is offered as Replay only. Any error or
+  missing token or stylesheet ends the intro and restores the page, as do frames stopping for
+  6 s (checked once a second). Title, meta, JSON-LD and markup are unchanged, so search engines
+  and link previews see the same page.
 
 ## Performance
 
 Canvas 2D, no libraries. The device pixel ratio is capped at 2 and stepped down to 1.5 and 1
 if frames keep running long. Checked at phone size with 4× and 6× CPU throttling.
+
+The site’s 3D stage starts while the intro plays and, on a slow device, can hold up every
+frame for seconds as it does (here, with a software GPU, 2–4 s). The first gap of more than
+1 s between frames is therefore a pause: the piece carries on where it stopped and the sound,
+if on, picks up again in step. Later long gaps are dropped frames, so a device that is slow
+throughout still finishes on time.
 
 ## Changes from the first draft
 
@@ -105,3 +117,11 @@ if frames keep running long. Checked at phone size with 4× and 6× CPU throttli
   be measured here.
 - The pad’s low voice moved from 110 Hz to 440 Hz: the spectrogram showed the finale’s low end
   as a muddy wash.
+- Fixed after release: on a first visit from a phone the intro often did not play. The site’s
+  loader lifted while the intro’s stylesheet was still loading, and on slow connections the
+  stylesheet arrived after the old 3 s takeover limit. The limit is gone and the cover described
+  under Behaviour holds the page until the stylesheet arrives. Separately, the stage’s start-up
+  could hold frames up past the old 3 s stall limit, which ended the intro, or skip its opening;
+  the limit is now 6 s and the first long gap is a pause (see Performance). With phone-like
+  network delays and a 4× slower CPU it now plays to the end in all six cases tried (4G, slow
+  4G and 3G, each with and without a warm cache); before, it did not start in three of them.
